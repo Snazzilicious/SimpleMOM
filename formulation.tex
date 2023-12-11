@@ -1,0 +1,119 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+
+\newcommand{\norm}[1]{||#1||}
+\newcommand{\Div}[0]{\nabla\cdot}
+\newcommand{\Curl}[0]{\nabla\times}
+
+\theoremstyle{plain}
+\newtheorem*{remark}{Remark}
+
+\begin{document}
+
+
+
+
+% want to get error bound for a given frequency - hopefully can integrate e^ikS'(x-x0) analytically |I| <= 2/k, also f'(x-x0)e^ikS'(x-x0)
+% state conditions for integral to be approximately zero \phi >> 1/k >> grad f \cdot grad \phi
+% TODO include expression for stationary point
+
+
+\section{Intro}\label{sec_intro}
+
+% pick domain - start on the manifold
+% TODO describe the problem set up better
+Consider the integral
+\begin{equation}
+	I = \int\int f(x) e^{ikS(x)} \sqrt{g} dx_1dx_2.
+\end{equation}
+For convenience, we absorb the metric into $f$.
+\begin{equation}
+	I = \int\int F(x) e^{ikS(x)} dx_1dx_2
+\end{equation}
+
+
+
+% pick x0 (to evaluate grad S) - also an x0 to evaluate grad F (doesn't need to be the same x0)
+% taylor expand
+We suppose that both $F$ and $S$ can be approximated well by a Taylor series expansion about $x^*$.
+Thus
+\begin{equation}
+	I \approx \int\int \left[ F(x^*) + \nabla F(x^*) \cdot (x-x^*) \right] e^{ik\left[S(x^*) + \nabla S(x^*)\cdot (x-x^*) \right]} dx_1dx_2.
+\end{equation}
+We assume that $\frac{dS}{dx_2}(x^*) = 0$ and consequently $\frac{dS}{dx_1}(x^*) = \norm{\nabla S(x^*)}$.
+If this is not already the case, a new coordinate system can be introduced for which it is. See \ref{sec_rotation}.
+
+
+% sort terms and integrate
+We now have
+\begin{equation}
+	I \approx \int\int \left[ F(x^*) + \nabla F(x^*) \cdot (x-x^*) \right] e^{ik\left[S(x^*) + \norm{\nabla S(x^*)}(x_1-x_1*) \right]} dx_1dx_2.
+\end{equation}
+%\begin{multline}
+%	I \approx F(x^*) e^{ikS(x^*)} \int\int e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2 \\
+%	+ e^{ikS(x^*)}\int\int \nabla F(x^*) \cdot (x-x^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2.
+%\end{multline}
+\begin{multline}
+	= F(x^*) e^{ikS(x^*)} \int\int e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1dx_2 \\
+	+ \frac{dF}{dx_1}(x^*) e^{ikS(x^*)} \int\int (x_1-x_1^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2 \\
+	+ \frac{dF}{dx_2}(x^*) e^{ikS(x^*)} \int (x_2-x_2^*) \int e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2.
+\end{multline}
+
+
+% work out integral(s)
+% e^ikSx - note that (e^i\pi)^2n - 1 = 0
+% x eikSx
+
+Consider first the integral
+\begin{equation}
+	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 = \frac{e^{ik\norm{\nabla S(x^*)}A}}{ik\norm{\nabla S(x^*)}} \left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
+\end{equation}
+This shows that
+\begin{equation}
+	|I_1| \leq \frac{2}{k\norm{\nabla S(x^*)}},
+\end{equation}
+independent of the domain of integration.
+In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\mathbb{N}$.
+
+
+
+
+
+\section{Coordinate rotation}\label{sec_rotation}
+% rotate coordinates to align with grad S at expansion point
+%	include grad S in rotation matrix
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
+
+
+
