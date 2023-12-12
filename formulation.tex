@@ -21,18 +21,20 @@
 
 % want to get error bound for a given frequency - hopefully can integrate e^ikS'(x-x0) analytically |I| <= 2/k, also f'(x-x0)e^ikS'(x-x0)
 % state conditions for integral to be approximately zero \phi >> 1/k >> grad f \cdot grad \phi
-% TODO include expression for stationary point
+% TODO
+% Set up rectangular patch - for fourier series in particular
+% include expression for stationary point
 
 
 \section{Intro}\label{sec_intro}
 
 % pick domain - start on the manifold
 % TODO describe the problem set up better
-Consider the integral
+Consider the integral on a manifold
 \begin{equation}
 	I = \int\int f(x) e^{ikS(x)} \sqrt{g} dx_1dx_2.
 \end{equation}
-For convenience, we absorb the metric into $f$.
+For convenience, we absorb the metric into the function as  $F = f\sqrt{g}$.
 \begin{equation}
 	I = \int\int F(x) e^{ikS(x)} dx_1dx_2
 \end{equation}
@@ -41,38 +43,48 @@ For convenience, we absorb the metric into $f$.
 
 % pick x0 (to evaluate grad S) - also an x0 to evaluate grad F (doesn't need to be the same x0)
 % taylor expand
-We suppose that both $F$ and $S$ can be approximated well by a Taylor series expansion about $x^*$.
+We suppose that $S$ can be approximated well by a Taylor series expansion about $x^*$.
 Thus
 \begin{equation}
-	I \approx \int\int \left[ F(x^*) + \nabla F(x^*) \cdot (x-x^*) \right] e^{ik\left[S(x^*) + \nabla S(x^*)\cdot (x-x^*) \right]} dx_1dx_2.
+	I \approx \int\int F(x) e^{ik\left(S(x^*) + \nabla S(x^*)\cdot (x-x^*) \right)} dx_1dx_2.
 \end{equation}
 We assume that $\frac{dS}{dx_2}(x^*) = 0$ and consequently $\frac{dS}{dx_1}(x^*) = \norm{\nabla S(x^*)}$.
-If this is not already the case, a new coordinate system can be introduced for which it is. See \ref{sec_rotation}.
+If this is not already the case, a new coordinate system can be introduced for which it is. See \ref{sec_rotation} for details.
+
+
+% Fourier transform
+We now replace $F$ with a Fourier series
+\begin{equation}
+	F(x) = \sum_n \alpha_n(x_2) e^{ \frac{i2\pi n}{ \Delta x_1}x_1 }
+\end{equation}
+with coefficients
+\begin{equation}
+	\alpha_n(x_2) = \int F(x) e^{ \frac{-i2\pi n}{ \Delta x_1}x_1 } dx_1
+\end{equation}
 
 
 % sort terms and integrate
 We now have
 \begin{equation}
-	I \approx \int\int \left[ F(x^*) + \nabla F(x^*) \cdot (x-x^*) \right] e^{ik\left[S(x^*) + \norm{\nabla S(x^*)}(x_1-x_1*) \right]} dx_1dx_2.
+	I \approx \sum_n \int\int \alpha_n(x_2) e^{ \frac{i2\pi n}{ \Delta x_1 }x_1 }
+	e^{ik\left[S(x^*) + \norm{\nabla S(x^*)}(x_1-x_1^*) \right]} dx_1dx_2.
 \end{equation}
-%\begin{multline}
-%	I \approx F(x^*) e^{ikS(x^*)} \int\int e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2 \\
-%	+ e^{ikS(x^*)}\int\int \nabla F(x^*) \cdot (x-x^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2.
-%\end{multline}
-\begin{multline}
-	= F(x^*) e^{ikS(x^*)} \int\int e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1dx_2 \\
-	+ \frac{dF}{dx_1}(x^*) e^{ikS(x^*)} \int\int (x_1-x_1^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2 \\
-	+ \frac{dF}{dx_2}(x^*) e^{ikS(x^*)} \int (x_2-x_2^*) \int e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1dx_2.
-\end{multline}
+\begin{equation}
+	= \sum_n e^{ik \left( S(x^*) - \norm{\nabla S(x^*)}x_1^* \right)} 
+	\int \alpha_n(x_2) dx_2 
+	\int e^{ i\left( k\norm{\nabla S(x^*)} + \frac{2\pi n}{ \Delta x_1 }\right) x_1 } dx_1
+\end{equation}
 
 
 % work out integral(s)
 % e^ikSx - note that (e^i\pi)^2n - 1 = 0
 % x eikSx
 
-Consider first the integral
+The integral over $x_1$ is
 \begin{equation}
-	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 = \frac{e^{ik\norm{\nabla S(x^*)}A}}{ik\norm{\nabla S(x^*)}} \left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
+	\int_a^b e^{ i\left( k\norm{\nabla S(x^*)} + \frac{2\pi n}{ \Delta x_1 }\right) x_1 } dx_1
+	= \frac{e^{ i\left( k\norm{\nabla S(x^*)} + \frac{2\pi n}{ \Delta x_1 }\right) a } }{ ik\norm{\nabla S(x^*)} + \frac{i2\pi n}{ \Delta x_1 } }
+	\left( e^{ i\left( k\norm{\nabla S(x^*)}\Delta x_1 + 2\pi n \right)  } - 1 \right).
 \end{equation}
 This shows that
 \begin{equation}
