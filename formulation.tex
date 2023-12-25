@@ -7,7 +7,8 @@
 \usepackage{indentfirst}
 \usepackage{hyperref}
 
-\newcommand{\norm}[1]{||#1||}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
 \newcommand{\Div}[0]{\nabla\cdot}
 \newcommand{\Curl}[0]{\nabla\times}
 
@@ -27,6 +28,86 @@
 
 
 \section{Intro}\label{sec_intro}
+
+
+
+\section{Stationary Phase}\label{sec_stationaryPhase}
+
+% 1D example
+% include expression for stationary point from Pathak or wikipedia
+
+The goal of this section is to show under what conditions an integral involving a
+highly oscillatory term produces an almost zero result.
+% TODO include those conditions here
+
+Consider the integral on a manifold
+\begin{equation}
+    I = \int_\Omega f e^{ikS} \sqrt{g} \,dA,
+\end{equation}
+in which $f$, $S$, and $g$ are functions of $x$, with dependence suppressed for simplicity.
+The domain $\Omega$ is assumed simple, meaning that any line through it intersects the boundary in exactly 2 places.
+For convenience, we absorb the square root of the metric determinant into $f$.
+\begin{equation}
+    I = \int_\Omega F e^{ikS} \,dA
+\end{equation}
+rewrite
+\begin{equation}
+    = \int_\Omega \frac{F}{ik\mathbf{v}\cdot\nabla S} \nabla\cdot\left( \mathbf{v}e^{ikS} \right) \,dA
+\end{equation}
+Green's Identity
+\begin{equation}
+    = \int_{d\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+    - \int_\Omega e^{ikS} \mathbf{v}\cdot\nabla\left( \frac{F}{ik\mathbf{v}\cdot\nabla S} \right) \,dA
+\end{equation}
+Product rule and note that $\mathbf{v}\cdot\nabla\left(\mathbf{v}\cdot\nabla S\right) = \mathbf{v}^TH_S\mathbf{v}$
+\begin{equation}
+    = \int_{d\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+    - \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F
+    - Fe^{ikS} \frac{\mathbf{v}^TH_S\mathbf{v}}{ ik\left(\mathbf{v}\cdot\nabla S\right)^2} \,dA
+\end{equation}
+% TODO move last term over to original integral and argue that the factor is small
+% TODO use Taylor series to replace integrand on d\Omega with a value where the limits of integration are a multiple of 2\pi
+\begin{equation}
+    \abs{ \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F \,dA }
+    \leq \frac{\abs{\Omega}}{k} \frac{\max\abs{\mathbf{v}\cdot\nabla F}}{\min\abs{\mathbf{v}\cdot\nabla S}}
+\end{equation}
+
+
+% TODO
+% set up relationship among dL, \mathbf{t}, and \hat{n}
+
+We separate the boundary into two arcs, $\Gamma^+$ and $\Gamma^-$,
+which are respectively the portions of the domain where $\mathbf\cdot\hat{n} > 0$ and $\mathbf\cdot\hat{n} < 0$.
+The arcs are parameterized by the variable $\xi$ in such a way that
+\begin{equation}
+	\Gamma^+(\xi) - \Gamma^-(\xi) = \alpha(\xi)\mathbf{v},
+\end{equation}
+where $\alpha(\xi)$ is a scalar function.
+The tangent vectors for the arcs are given by
+\begin{equation}
+	\mathbf{t}^\pm = \frac{d\Gamma}{d\xi}^\pm.
+\end{equation}
+We thus get
+\begin{equation}
+	\mathbf{t}^+(\xi) - \mathbf{t}^-(\xi) = \frac{d\alpha}{d\xi}(\xi)\mathbf{v}.
+\end{equation}
+Multiplying by the rotation matrix we get
+\begin{equation}
+	\mathbf{n}^+(\xi) + \mathbf{n}^-(\xi) = \frac{d\alpha}{d\xi}(\xi)R\mathbf{v}.
+\end{equation}
+We now multiply by $\mathbf{v}$ to get
+\begin{equation}
+	\mathbf{v}\cdot\mathbf{n}^+(\xi) + \mathbf{v}\cdot\mathbf{n}^-(\xi) = 0,
+\end{equation}
+and so finally
+\begin{equation}
+	\mathbf{v}\cdot\mathbf{n}^+(\xi) = -\mathbf{v}\cdot\mathbf{n}^-(\xi).
+\end{equation}
+The path integral is now given by
+\begin{equation}
+	 \int \left( \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n}
+	 - \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \right)\mathbf{v}\cdot\mathbf{n} \,d\xi
+\end{equation}
 
 
 
@@ -77,9 +158,11 @@ We now have
 % e^ikSx - note that (e^i\pi)^2n - 1 = 0
 % x eikSx
 
-Consider first the integral
+Consider the integral
 \begin{equation}
-	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 = \frac{e^{ik\norm{\nabla S(x^*)}A}}{ik\norm{\nabla S(x^*)}} \left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
+	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 
+	= \frac{e^{ik\norm{\nabla S(x^*)}(A-x^*)}}{ik\norm{\nabla S(x^*)}}
+	\left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
 \end{equation}
 This shows that
 \begin{equation}
@@ -88,6 +171,14 @@ This shows that
 independent of the domain of integration.
 In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\mathbb{N}$.
 
+Now consider the integral 
+\begin{equation*}
+	I_2 = \int_A^B (x_1-x_1^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1
+\end{equation*}
+\begin{equation}
+	= \left[ \frac{(x_1-x_1^*)}{ik\norm{\nabla S(x^*)}} e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} \right]_A^B
+	- \frac{1}{ik\norm{\nabla S(x^*)}}\int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1
+\end{equation}
 
 
 
@@ -153,7 +244,7 @@ The integral over $x_1$ is
 \end{equation}
 This shows that
 \begin{equation}
-	|I_1| \leq \frac{2}{k\norm{\nabla S(x^*)}},
+	|I_1| \leq \frac{2}{k\norm{\nabla S(x^*)} + \frac{2\pi n}{ \Delta x_1 }},
 \end{equation}
 independent of the domain of integration.
 In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\mathbb{N}$.
