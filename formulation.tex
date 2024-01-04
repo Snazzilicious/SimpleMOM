@@ -50,34 +50,48 @@ For convenience, we absorb the square root of the metric determinant into $f$.
 \begin{equation}
     I = \int_\Omega F e^{ikS} \,dA
 \end{equation}
-rewrite
+We now introduce the vector $\mathbf{v}$ that allows us to rewrite the integral as
 \begin{equation}
-    = \int_\Omega \frac{F}{ik\mathbf{v}\cdot\nabla S} \nabla\cdot\left( \mathbf{v}e^{ikS} \right) \,dA
+    = \int_\Omega \frac{F}{ik\mathbf{v}\cdot\nabla S} \nabla\cdot\left( \mathbf{v}e^{ikS} \right) \,dA.
 \end{equation}
-Green's Identity
+For this to be a valid reformulation, it must be the case that $\mathbf{v}\cdot\nabla S \neq 0$ for all $x\in\omega$.
+Discussion of ther best choice of $\mathbf{v}$ is included later.
+At this point we make use of Green's Identity to rewrite the integral again as
 \begin{equation}
-    = \int_{d\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
-    - \int_\Omega e^{ikS} \mathbf{v}\cdot\nabla\left( \frac{F}{ik\mathbf{v}\cdot\nabla S} \right) \,dA
+    = \int_{\partial\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+    - \int_\Omega e^{ikS} \mathbf{v}\cdot\nabla\left( \frac{F}{ik\mathbf{v}\cdot\nabla S} \right) \,dA.
 \end{equation}
-Product rule and note that $\mathbf{v}\cdot\nabla\left(\mathbf{v}\cdot\nabla S\right) = \mathbf{v}^TH_S\mathbf{v}$
+
+% TODO
+% make first term look like 2nd term
+% expand using product rule
+% move last term over to original integral and argue that the factor is small
+% Apply bound
+
+We now focus on the first term.
+
+% TODO
+% set up relationship among dL, \mathbf{t}, and \hat{n}
+
+
+The product rule is applied to the second term and the relationship $\mathbf{v}\cdot\nabla\left(\mathbf{v}\cdot\nabla S\right) = \mathbf{v}^TH_S\mathbf{v}$
+is used to achieve
 \begin{equation}
-    = \int_{d\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
-    - \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F
-    - Fe^{ikS} \frac{\mathbf{v}^TH_S\mathbf{v}}{ ik\left(\mathbf{v}\cdot\nabla S\right)^2} \,dA
+    = \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F
+    - Fe^{ikS} \frac{\mathbf{v}^TH_S\mathbf{v}}{ ik\left(\mathbf{v}\cdot\nabla S\right)^2} \,dA.
 \end{equation}
 % TODO move last term over to original integral and argue that the factor is small
 % TODO use Taylor series to replace integrand on d\Omega with a value where the limits of integration are a multiple of 2\pi
+From this expression, the following bound is apparent
 \begin{equation}
     \abs{ \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F \,dA }
     \leq \frac{\abs{\Omega}}{k} \frac{\max\abs{\mathbf{v}\cdot\nabla F}}{\min\abs{\mathbf{v}\cdot\nabla S}}
 \end{equation}
 
 
-% TODO
-% set up relationship among dL, \mathbf{t}, and \hat{n}
 
 We separate the boundary into two arcs, $\Gamma^+$ and $\Gamma^-$,
-which are respectively the portions of the domain where $\mathbf\cdot\hat{n} > 0$ and $\mathbf\cdot\hat{n} < 0$.
+which are respectively the portions of the domain where $\mathbf{v}\cdot\hat{n} > 0$ and $\mathbf{v}\cdot\hat{n} < 0$.
 The arcs are parameterized by the variable $\xi$ in such a way that
 \begin{equation}
 	\Gamma^+(\xi) - \Gamma^-(\xi) = \alpha(\xi)\mathbf{v},
@@ -105,8 +119,8 @@ and so finally
 \end{equation}
 The path integral is now given by
 \begin{equation}
-	 \int \left( \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n}
-	 - \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \right)\mathbf{v}\cdot\mathbf{n} \,d\xi
+	 \int \left( \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S}\rvert_{\Gamma^+}
+	 - \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S}\rvert_{\Gamma^-} \right)\mathbf{v}\cdot\mathbf{n}^+ \,d\xi
 \end{equation}
 
 
