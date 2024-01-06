@@ -123,6 +123,26 @@ The path integral is now given by
 	 - \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S}\rvert_{\Gamma^-} \right)\mathbf{v}\cdot\mathbf{n}^+ \,d\xi
 \end{equation}
 
+We now introduce the coordinate transformation
+\begin{equation}
+	x(\xi,\eta) = \Gamma^-(\xi) + \eta\mathbf{v},
+\end{equation}
+the Jacobian of which satisfies the relationship
+\begin{equation}
+	\abs{ \det
+	\begin{bmatrix}
+		\frac{d\Gamma_1}{d\xi}^- & v_1 \\
+		\frac{d\Gamma_2}{d\xi}^- & v_2 
+	\end{bmatrix}}
+	= \abs{ v_2\frac{d\Gamma_1}{d\xi}^- - v_1\frac{d\Gamma_2}{d\xi}^- }
+	= \abs{ \mathbf{v}\cdot R\mathbf{t}^- }
+	= \abs{ \mathbf{v}\cdot\mathbf{n}^- }
+	= \mathbf{v}\cdot\mathbf{n}^+.
+\end{equation}
+This transformation allows us put integral back in terms of the original vairables
+\begin{equation}
+	\frac{1}{ik} \int_\Omega \mathbf{v}\cdot\nabla\left(\frac{F}{\nabla S}\right) \,dA.
+\end{equation}
 
 
 \section{Taylor Series}
