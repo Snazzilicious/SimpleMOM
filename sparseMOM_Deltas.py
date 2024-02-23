@@ -1,52 +1,19 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from re import search
+from MeshUtils import loadVTK
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
 
-f=open(meshFileName, "r")
+vertices, facets = loadVTK( meshFileName )
+nVertices = len(vertices)
+nFacets = len(facets)
 
-# Get nVertices
-m=None
-while m is None:
-	m = search( "POINTS ([0-9]+)", f.readline() )
-nVertices = int(m[1])
-
-# Get Vertices
-vertices = np.zeros((nVertices,3))
-for i in range(nVertices):
-	vertices[i,:] = [ float(x) for x in f.readline().split() ]
-
-# Get nFacets
-m=None
-while m is None:
-	m = search( "CELLS ([0-9]+)", f.readline() )
-nFacets = int(m[1])
-
-# Get Facets
-facets=[]
-for i in range(nFacets):
-	tmp = [int(x) for x in f.readline().split()]
-	if tmp[0] == 3:
-		facets.append(tmp[1:])
-
-nFacets=len(facets)
-facets = np.row_stack(facets)
-
-f.close()
-
-# Get Normals
+# Construct vector basis functions
 bases = np.zeros((2*nFacets,3))
 bases[:nFacets] = vertices[facets[:,1],:] - vertices[facets[:,0],:]
 bases[nFacets:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
-#facetNormals = np.cross(v1, v2)
-#facetAreas = np.linalg.norm(facetNormals,axis=1)
-#for faceInd in range(nFacets):
-#	facetNormals[faceInd,:] /= facetAreas[faceInd]
-#	v1[faceInd,:] = np.linalg.norm(v1[faceInd])
-#	v2[faceInd,:] = np.linalg.norm(v2[faceInd])
 
 # Going to use constant basis functions within facets - v1 and v2 can be vector bases
 # use divergence theorem to write in terms of perimeter integral - this should entirely cancel out
@@ -79,6 +46,9 @@ scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0
 def G( x, y ):
 	R = np.linalg.norm( x - y )
 	return np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
+
+def gradG( x,y ):
+	return 1 # TODO
 
 def gradgradG( x,y ):
 	return 1 # TODO
