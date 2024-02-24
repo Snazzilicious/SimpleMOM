@@ -23,4 +23,6 @@ simple_gradgradG = [ [ sp.simplify( exp.subs( R, r ) ) for exp in rowG ] for row
 
 # diagonal term
 """ ( (xi - yi)**2 * (R**2*k**2 + 3*I*R*k - 3) + R**2 + -I*R**3*k ) * exp(I*R*k)/(4*pi*R**5) """
+# Off diagonal
+""" (x1 - y1)*(x2 - y2)*(R**2*k**2 + 3*I*R*k - 3)*exp(I*R*k)/(4*pi*R**5) """
 # note both real and imag parts of exp(I*R) are even functions because R>0
