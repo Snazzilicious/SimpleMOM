@@ -84,11 +84,20 @@ for i in range(2*nFacets):
 		b[i,j] = wts[facet_i] @ scenarios[j].excitation(pts[facet_i]) @ bases[facet_i]
 
 # TODO Replace slow double loop with these
+tmpPts = pts.reshape((-1,3,1))
+dx = (tmpPts-tmpPts.T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
+R = np.linalg.norm( dx, axis=-1 )
+I_G = np.einsum('ijkl,ik,jl->ij', np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 ), wts,wts )		
+
+I_ggG = np.einsum('ijklm,ijkln,ijkl,ik,jl->ijmn', dx,dx, f(...), wts,wts )
+I_ggG += np.einsum('ijklm,ijkln,ijkl,mn,ik,jl->ijmn', dx,dx, g(...), np.eye(3), wts,wts )
+I_ggG /= 1j * w * epsilon_0
+
 A = 1j * w * mu_0 * bases @ bases.T
-I_G = np.einsum('ijkl,ik,jl->ij', G(), wts,wts ) # TODO find most efficient operations & memory ordering
 for i in range(2):
 	for j in range(2):
 		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] *= I_G
+		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] += np.einsum('ijkl,ik,jl->ij' I_ggG, bases[i*nFacets:(i+1)*nFacets], bases[j*nFacets:(j+1)*nFacets])
 
 # Factor and solve
 sols = np.linalg.solve( A,b )
