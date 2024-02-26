@@ -39,7 +39,7 @@ class PlaneWave:
 			self.observations = obs.copy()
 	
 	def excitation(self, xyz ):
-		return self.polV * np.exp( 1j * k * self.prop.dot( xyz ) )
+		return self.polV * np.exp( 1j * k * xyz @ self.prop )
 
 scenarios = [PlaneWave( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
 scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
@@ -62,49 +62,33 @@ def gradygradxG( x,y ):
 	return prefix * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 )
 
 
-A = np.zeros((2*nFacets,2*nFacets),dtype=np.complex128)
-b = np.zeros((2*nFacets,len(scenarios)),dtype=np.complex128)
-for i in range(2*nFacets):
-	for j in range(2*nFacets):
-		facet_i = i % nFacets
-		facet_j = j % nFacets
-		# integral of  jwu G(x_i,x_j) vi^Tv_j + vi^T dxi dxj G(x_i,x_j) v_j / jwe
-		I1 = 1j * w * mu_0 * (bases[i] @ bases[j]) * ( wts[facet_i] @ G(pts[facet_i],pts[facet_j]) @ wts[facet_j] )
-		if facet_i == facet_j : # Singularity!
-			# integral of -vi^T gradG vj^T nHat
-			# TODO
-			I2 = 
-		else:
-			I2 = bases[i] @ ( wts[facet_i] @ gradygradxG(pts[facet_i],pts[facet_j]) @ wts[facet_j] ) @ bases[j]
-		I2 /= 1j * w * epsilon_0
-		A[i,j] = I1 + I2
-		
-	for j in range(len(scenarios)):
-		# integral of vi^T scenarios[j].excitation( xi )
-		b[i,j] = wts[facet_i] @ scenarios[j].excitation(pts[facet_i]) @ bases[facet_i]
-
-# TODO Replace slow double loop with these
-tmpPts = pts.reshape((-1,3,1))
-dx = (tmpPts-tmpPts.T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
+dx = (pts.reshape((-1,3,1))-pts.reshape((-1,3,1)).T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
 R = np.linalg.norm( dx, axis=-1 )
-I_G = np.einsum('ijkl,ik,jl->ij', np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 ), wts,wts )		
+I_G = np.einsum('ijkl,ik,jl->ij', np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 ), wts,wts )
 
+I_gG = ... # TODO
+
+# TODO zero out diagonal, fill in functions of R
 I_ggG = np.einsum('ijklm,ijkln,ijkl,ik,jl->ijmn', dx,dx, f(...), wts,wts )
 I_ggG += np.einsum('ijklm,ijkln,ijkl,mn,ik,jl->ijmn', dx,dx, g(...), np.eye(3), wts,wts )
 I_ggG /= 1j * w * epsilon_0
 
 A = 1j * w * mu_0 * bases @ bases.T
+b = np.zeros((2*nFacets,len(scenarios)),dtype=np.complex128)
 for i in range(2):
 	for j in range(2):
 		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] *= I_G
 		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] += np.einsum('ijkl,ik,jl->ij' I_ggG, bases[i*nFacets:(i+1)*nFacets], bases[j*nFacets:(j+1)*nFacets])
+
+	for j in range(len(scenarios)):
+		b[i*nFacets:(i+1)*nFacets,j] = np.einsum( 'ijk,ij,ik->i', scenarios[j].excitation(pts), wts, bases[i*nFacets:(i+1)*nFacets] )
 
 # Factor and solve
 sols = np.linalg.solve( A,b )
 
 
 # post process
-mags = [[np.linalg.norm( np.exp( 1j * k * srcPts.dot( obs ) ) @ sols[:,3*j:3*(j+1)] ) for obs in scene.observations] for scene in scenarios]
+mags = [[np.linalg.norm( np.exp( 1j * k * srcPts.dot( obs ) ) @ sols[:,3*j:3*(j+1)] ) for obs in scene.observations] for j,scene in enumerate(scenarios)]
 
 # Plot results
 #ax = plt.figure().add_subplot(projection='3d')
