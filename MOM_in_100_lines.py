@@ -1,11 +1,14 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.constants import mu_0,epsilon_0,speed_of_light
 from MeshUtils import loadVTK
 
 # TODO
 # verify derivates numerically
+# compute pts and wts
 # spot check matrix elements (and rhs)
+# farfield
 # find reference cases
 
 # Load mesh
@@ -22,9 +25,8 @@ bases[nFacets:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 
 
 # Set up Scenario(s)
-c = 3e8
 w = 3e9
-k = w / c
+k = w / speed_of_light
 
 class PlaneWave:
 	def __init__(self, propDir, polVec, obs=None):
@@ -45,21 +47,19 @@ scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0
 
 # Fill Matrix and RHS(s)
 def G( x,y ):
-	R = np.linalg.norm( x - y )
+	R = np.linalg.norm( x - y, axis=1 )
 	return np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
 
 def gradxG( x,y ):
 	dx = x-y
-	R = np.linalg.norm( dx )
+	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1, y.shape[-1] ))
 	return dx * ( 1j * k * R - 1 ) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 )
 
 def gradygradxG( x,y ):
 	dx = x-y
-	R = np.linalg.norm( dx )
-	return ( np.outer( dx,dx ) * (R**2*k**2 + 3j*R*k - 3) + (R**2 - 1j*R**3*k)*np.eye(3) ) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
-
-def DoubleIntegrate( x,wx, y,wy, f ): # TODO may have to manually evaluate at all point combinations
-	return wx @ f( x,y ) @ wy
+	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1,1, y.shape[-1] ))
+	prefix = np.einsum('ijk,ilk->ijlk', dx,dx) * (R**2*k**2 + 3j*R*k - 3) + (R**2 - 1j*R**3*k)*np.eye(3).reshape((x.shape[0],3,3,y.shape[-1]))
+	return prefix * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 )
 
 
 A = np.zeros((2*nFacets,2*nFacets),dtype=np.complex128)
@@ -69,19 +69,26 @@ for i in range(2*nFacets):
 		facet_i = i % nFacets
 		facet_j = j % nFacets
 		# integral of  jwu G(x_i,x_j) vi^Tv_j + vi^T dxi dxj G(x_i,x_j) v_j / jwe
-		I1 = 1j * w * mu * (bases[i] @ bases[j]) * DoubleIntegrate( pts[facet_i],wts[facet_i], pts[facet_j],wts[facet_j], G )
+		I1 = 1j * w * mu_0 * (bases[i] @ bases[j]) * ( wts[facet_i] @ G(pts[facet_i],pts[facet_j]) @ wts[facet_j] )
 		if facet_i == facet_j : # Singularity!
 			# integral of -vi^T gradG vj^T nHat
 			# TODO
 			I2 = 
 		else:
-			I2 = DoubleIntegrate( pts[facet_i],wts[facet_i], pts[facet_j],wts[facet_j], lambda x,y: bases[i] @ gradygradxG(x,y) @ bases[j] )
-		I2 /= 1j * w * ep
+			I2 = bases[i] @ ( wts[facet_i] @ gradygradxG(pts[facet_i],pts[facet_j]) @ wts[facet_j] ) @ bases[j]
+		I2 /= 1j * w * epsilon_0
 		A[i,j] = I1 + I2
 		
 	for j in range(len(scenarios)):
 		# integral of vi^T scenarios[j].excitation( xi )
-		b[i,j] = wts[facet_i].dot( scenarios[j].excitation(pts[facet_i]).dot(bases[facet_i]) )
+		b[i,j] = wts[facet_i] @ scenarios[j].excitation(pts[facet_i]) @ bases[facet_i]
+
+# TODO Replace slow double loop with these
+A = 1j * w * mu_0 * bases @ bases.T
+I_G = np.einsum('ijkl,ik,jl->ij', G(), wts,wts ) # TODO find most efficient operations & memory ordering
+for i in range(2):
+	for j in range(2):
+		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] *= I_G
 
 # Factor and solve
 sols = np.linalg.solve( A,b )
