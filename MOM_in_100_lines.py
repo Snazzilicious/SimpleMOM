@@ -46,8 +46,7 @@ scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0
 
 
 # Fill Matrix and RHS(s)
-def G( x,y ):
-	R = np.linalg.norm( x - y, axis=1 )
+def G( R ):
 	return np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
 
 def gradxG( x,y ):
@@ -64,7 +63,7 @@ def gradygradxG( x,y ):
 
 dx = (pts.reshape((-1,3,1))-pts.reshape((-1,3,1)).T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
 R = np.linalg.norm( dx, axis=-1 )
-I_G = np.einsum('ijkl,ik,jl->ij', np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 ), wts,wts )
+I_G = np.einsum('ijkl,ik,jl->ij', G(R), wts,wts )
 
 I_gG = ... # TODO
 
