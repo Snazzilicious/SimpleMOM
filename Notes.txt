@@ -1,0 +1,9 @@
+
+Validation for MOM:
+	mie series expressions on wikipedia
+	mie python
+
+Python ray tracers:
+trimesh
+embree
+
