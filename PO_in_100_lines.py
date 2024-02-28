@@ -3,20 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from MeshUtils import loadVTK
 
+# TODO
+# Plane, Wedge, No collisions
+# 	power?
+# currents
+# initial rays
+
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-
 vertices, facets = loadVTK( meshFileName )
-nVertices = len(vertices)
-nFacets = len(facets)
 
 # Compute Normals
-v1 = vertices[facets[:,1],:] - vertices[facets[:,0],:]
-v2 = vertices[facets[:,2],:] - vertices[facets[:,0],:]
-facetNormals = np.cross(v1, v2)
+facetNormals = np.cross( vertices[facets[:,1],:] - vertices[facets[:,0],:], vertices[facets[:,2],:] - vertices[facets[:,0],:] )
 facetAreas = np.linalg.norm(facetNormals,axis=1)
-for faceInd in range(nFacets):
-	facetNormals[faceInd,:] /= facetAreas[faceInd]
+for vec,norm in zip(facetNormals,facetAreas):
+	vec /= norm
 
 
 # Set up Scenario(s)
@@ -24,7 +25,7 @@ c = 3e8
 w = 3e9
 k = w / c
 
-class PlaneWave:
+class PlaneWaveScenario:
 	def __init__(self, propDir, polVec, obs=None):
 		self.prop = propDir.copy()
 		self.polV = prolVec.copy()
@@ -37,40 +38,40 @@ class PlaneWave:
 	def excitation(self, xyz ):
 		return self.polV * np.exp( 1j * k * self.prop.dot( xyz ) )
 
-scenarios = [PlaneWave( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
-scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
+scenarios = [PlaneWaveScenario( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
+scenarios.extend([ PlaneWaveScenario( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
 
 
-# get initial rays
+# TODO get initial rays
 totRays = np.zeros( len(scenarios), dtype=np.int64 )
 rayScenarioIDs = ...
 rayParentIDs = ...
 rayIDs = ...
 rayOrigins = ...
 rayDirs = ...
-rayEndFaces = None
 
-# while ray queue is nonempty
-
+while nRays > 0 :
 	# trace rays in queue to get collisions
 	rayEndFaces = mesh.ray.intersects_first( ray_origins=rayOrigins, ray_directions=rayDirs )
 	
-	# save ray history
+	# categorize collisions based on (face, edge, wrong side, material, etc)
+	collisionHandlerInds = getCollisionHandlers( rayEndFaces )
+	newOrder = np.argsort( collisionHandlerInds )
+	for arr in [rayScenarioIDs,rayParentIDs,rayIDs,rayOrigins,rayDirs,rayEndFaces]:
+		arr[:] = arr[newOrder]
+	# get ranges for each handler
+	handlerRanges = np.zeros( nHandlers+1, dtype=np.int32 )
+	handlerRanges[1:] = np.cumsum( np.bincount(collisionHandlerInds) )
 	
-	raysThatHit = np.where( rayEndFaces >= 0 )[0]
-	
-	# categorize collisions (face, edge, wrong side, material, etc)
-	# clear ray queue
-	
-	# Handle collision
-		# compute current, and store with correct scenario
-		# produce new rays and add to ray queue
+	# Handle collisions
+	for ind in range(nHandlers):
+		newRays, currents = collisionHandler[ind]( handlerRanges[ind],handlerRanges[ind+1], ... )
+		# store currents
+		# add new rays to ray queue
 
-# for each scenario
-	# for each observation
-		# for each current associated with this scenario
-			# observation += contribution from current
-# ALT
+	# save ray history
+	# refresh ray queue (including set rayIDs)
+
 # for each current
 	# for each observation in scenarios[ current.scenario ]
 		# observation += contribution from current

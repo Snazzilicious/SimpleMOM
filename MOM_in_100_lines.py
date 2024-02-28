@@ -13,9 +13,7 @@ from MeshUtils import loadVTK
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-
 vertices, facets = loadVTK( meshFileName )
-nVertices = len(vertices)
 nFacets = len(facets)
 
 # Construct vector basis functions
@@ -28,7 +26,7 @@ bases[nFacets:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 w = 3e9
 k = w / speed_of_light
 
-class PlaneWave:
+class PlaneWaveScenario:
 	def __init__(self, propDir, polVec, obs=None):
 		self.prop = propDir.copy()
 		self.polV = polVec.copy()
@@ -41,11 +39,12 @@ class PlaneWave:
 	def excitation(self, xyz ):
 		return self.polV * np.exp( 1j * k * xyz @ self.prop )
 
-scenarios = [PlaneWave( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
-scenarios.extend([ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
+scenarios = [PlaneWaveScenario( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
+scenarios.extend([ PlaneWaveScenario( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
 
 
-# Fill Matrix and RHS(s)
+# Fill Matrix and RHSs
+# helper functions
 def G( R ):
 	return np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
 
@@ -54,24 +53,25 @@ def gradxG( x,y ):
 	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1, y.shape[-1] ))
 	return dx * ( 1j * k * R - 1 ) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 )
 
-def gradygradxG( x,y ):
-	dx = x-y
-	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1,1, y.shape[-1] ))
-	prefix = np.einsum('ijk,ilk->ijlk', dx,dx) * (R**2*k**2 + 3j*R*k - 3) + (R**2 - 1j*R**3*k)*np.eye(3).reshape((x.shape[0],3,3,y.shape[-1]))
-	return prefix * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 )
+def gradygradxG_1( R ):
+	return (R**2*k**2 + 3j*R*k - 3) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
+def gradygradxG_2( R ):
+	return (R**2 - 1j*R**3*k) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
 
-
+# Galerkin integrals of basis functions and Green's functions
 dx = (pts.reshape((-1,3,1))-pts.reshape((-1,3,1)).T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
 R = np.linalg.norm( dx, axis=-1 )
 I_G = np.einsum('ijkl,ik,jl->ij', G(R), wts,wts )
 
 I_gG = ... # TODO
 
-# TODO zero out diagonal, fill in functions of R
-I_ggG = np.einsum('ijklm,ijkln,ijkl,ik,jl->ijmn', dx,dx, f(...), wts,wts )
-I_ggG += np.einsum('ijklm,ijkln,ijkl,mn,ik,jl->ijmn', dx,dx, g(...), np.eye(3), wts,wts )
+I_ggG = np.einsum('ijklm,ijkln,ijkl,ik,jl->ijmn', dx,dx, gradygradxG_1(R), wts,wts )
+I_ggG += np.einsum('ijklm,ijkln,ijkl,mn,ik,jl->ijmn', dx,dx, gradygradxG_2(R), np.eye(3), wts,wts )
 I_ggG /= 1j * w * epsilon_0
+for i in range(nFacets): # diagonal values invalid
+	I_ggG[i,i,:,:] = 0.0
 
+# Matrix assembly
 A = 1j * w * mu_0 * bases @ bases.T
 b = np.zeros((2*nFacets,len(scenarios)),dtype=np.complex128)
 for i in range(2):
@@ -81,6 +81,7 @@ for i in range(2):
 
 	for j in range(len(scenarios)):
 		b[i*nFacets:(i+1)*nFacets,j] = np.einsum( 'ijk,ij,ik->i', scenarios[j].excitation(pts), wts, bases[i*nFacets:(i+1)*nFacets] )
+
 
 # Factor and solve
 sols = np.linalg.solve( A,b )
