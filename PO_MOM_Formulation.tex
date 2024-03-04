@@ -1,0 +1,76 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
+\newcommand{\Div}[0]{\nabla\cdot}
+\newcommand{\Curl}[0]{\nabla\times}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{plain}
+\newtheorem*{remark}{Remark}
+
+\title{Solution of MOM Impedance Matrix by Sparse Matrix Factorization}
+\author{Ian Holloway}
+\date{December 2023}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{sec_intro}
+
+Consider an infinite plane wave incident on an infinite planar PEC surface.
+The currents induced may be computed by solving the EFIE problem
+\begin{equation}
+	-\hat{n}\times\mathbf{E}_i(x) = \hat{n}\times\int_\Omega \frac{e^{-ikR}}{4\pi R}
+	\left( i\omega\mu_0\mathbf{J} 
+	- \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} (\nabla\cdot\mathbf{J}) \right) \,dx',
+\end{equation}
+\begin{equation}
+	R = \norm{x-x'}.
+\end{equation}
+% Plug in plane wave for E and J
+The incident plane wave is given by
+\begin{equation}
+	\mathbf{E}_i = \mathbf{A}_Ee^{-ik(\mathbf{b}_E\cdot x + c_E)}.
+\end{equation}
+% TODO expression for E_i on/at the surface - Assume normal to plane is zHat
+We propose that the current also takes the form of a plane wave
+\begin{equation}
+	\mathbf{J} = \mathbf{A}_Je^{-ik(\mathbf{b}_J\cdot x + c_J)}.
+\end{equation}
+Computing the integral will allow us to fill in the values of $A_J$, $b_J$, and $c_J$.
+The explicit integral is
+\begin{equation}
+	-\hat{n}\times\mathbf{A}_Ee^{-ik(\mathbf{b}_E\cdot x + c_E)}
+	= \hat{n}\times\int_\Omega \frac{e^{-ik(R+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
+	\left( i\omega\mu_0 \mathbf{A}_J
+	- \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
+\end{equation}
+% integrate both terms - get your Bessel Functions ready
+It is helpful to convert to a radial coordinate system given by
+\begin{equation}
+	x'_1-x_1 = r\cos{\theta} \text{ and } x'_2-x_2 = r\sin{\theta}, \quad\text{or}\quad r = R \text{ and } \theta = \tan^{-1}{\frac{x'_2 - x_2}{x'_1 - x_1}}.
+\end{equation}
+We now have the integral
+\begin{equation}
+	\int_0^\infty \int_0^{2\pi} \frac{e^{-ik(r+\norm{\mathbf{b}_J}r\cos{\theta} + \mathbf{b}_J\cdot x + c_J)}}{4\pi r}
+	\left( i\omega\mu_0 \mathbf{A}_J
+	- \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{r} \right) \,rd\theta dr,
+\end{equation}
+% solve for J plane wave parameters
+
+
+\end{document}
