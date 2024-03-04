@@ -14,3 +14,7 @@ Python ray tracers:
 trimesh
 embree
 
+
+
+Check form of second term in EFIE integral, the sign in particular
+
