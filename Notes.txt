@@ -1,4 +1,11 @@
 
+TODO MOM:
+# verify derivates numerically
+# compute pts and wts
+# spot check matrix elements (and rhs)
+# farfield
+# find reference cases
+
 Validation for MOM:
 	mie series expressions on wikipedia
 	mie python

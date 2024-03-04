@@ -7,28 +7,189 @@
 \usepackage{indentfirst}
 \usepackage{hyperref}
 
-\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
-\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
 \newcommand{\Div}[0]{\nabla\cdot}
 \newcommand{\Curl}[0]{\nabla\times}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
 
 \theoremstyle{plain}
 \newtheorem*{remark}{Remark}
 
+\title{Solution of MOM Impedance Matrix by Sparse Matrix Factorization}
+\author{Ian Holloway}
+\date{December 2023}
+
 \begin{document}
+\maketitle
+
+\section{Introduction}\label{sec_intro}
+
+There is potential to sparsify the Impedance matrix used for MOM.
+In regions where the currents and surface are smooth, the highly oscillatory kernel will essential nullify any affect on other regions of the surface.
+We can therefore construct an impedance matrix which only includes relevant interactions and invert that matrix much more easily than the full matrix.
+
+In practice we won't know which interactions are relevant without the solution.
+The algorithm proposed here starts with a "good guess" about what interactions are relevant to create a nominal sparse impedance matrix.
+The solution to this matrix problem is solved and the solution is used to more accurately identify which interactions are relevant so a new sparse matrix can be constructed.
+The process repeats until successive matrices would not differ significantly. This algorithm is proven to eventually produce the true solution.
+
+The algorithm poses a couple of challenges.
+The first is that a different matrix has to be constructed for each excitation (or for excitations that are significantly different).
+Though this increases the number of matrices and matrix factorizations, parallelization over excitations is trivial.
+The second challenge is coming up with an efficient criterion to add relevant interactions to the sparse impedance matrix, and ultimately stop iterating.
+Attempts to produce such criteria are made using local Taylor and Fourier expansions.
 
 
+\section{Algorithm}\label{sec_algo}
 
-
-% want to get error bound for a given frequency - hopefully can integrate e^ikS'(x-x0) analytically |I| <= 2/k, also f'(x-x0)e^ikS'(x-x0)
-% state conditions for integral to be approximately zero \phi >> 1/k >> grad f \cdot grad \phi
 % TODO
-% Set up rectangular patch - for fourier series in particular
-% include expression for stationary point
+% Pseudo code: MT MS UpdateFunc
+% Proof(s) of convergence
+% Proposal that will converge much faster than MS -> MT
+
+An algorithm is presented to solve the basic linear problem
+\begin{equation}\label{eq_zxb}
+	Zx=b,
+\end{equation}
+of order $N$.
+The motivating assumption is that direct inversion of $Z$ is difficult,
+but that the product of $Z$ and the solution $x^*$ can be approximated well using only a few elements in $Z$.
+That is
+\begin{equation}
+	\exists Z_{\text{sp}} \text{ s.t. } \norm{Z_\text{sp}}_0 \ll N^2 \text{ and } Z_{\text{sp}} x^* = Zx^*= b,
+\end{equation}
+and the inversion
+\begin{equation}
+	x^* = Z_{\text{sp}}^{-1}b
+\end{equation}
+is much easier to compute.
+
+An iteration scheme to acquire the solution more affordably is based on the sparse matrices $Z_{\text{sp}}^k$
+and an update function $\Psi$.
+For each $k$, the sparse matrix is made up of selected entries in the true matrix $Z$, $Z_{\text{sp},ij}^k=Z_{ij}\text{ or }0$.
+At each iteration, a solution, $x^k$, is computed to the problem $Z_{\text{sp}}^kx=b$.
+This solution is fed into the update function which returns new entries to add to the sparse matrix.
+A pseudocode is given in Algorithm \ref{alg_spSolve}.
+\begin{algorithm}
+\caption{Sparse Iterative Solve}\label{alg_spSolve}
+\begin{algorithmic}
+\State $Z_{\text{sp}}^0 \gets \text{diag } Z$ \Comment{Initialize sparse matrix e.g.}
+\State $k \gets 0$
+\While{ $Z_{\text{sp}}^k \ne Z$ } \Comment{Main loop begins here}
+	\State $x^k \gets (Z_{\text{sp}}^k)^{-1}b$
+	\State $I^k \gets \Psi(x^k)$
+	\If{$I^k = \emptyset$} \Comment{If a sufficiently accurate solution has been found}
+		\State\Return $x^k$ 
+	\EndIf
+	\State $Z_{\text{sp}}^{k+1} \gets Z_{\text{sp}}^k$ \Comment{Update sparse matrix}
+	\For{$(i,j)$ in $I^k$}
+		\State $Z_{\text{sp},ij}^{k+1} \gets Z_{ij}$
+	\EndFor
+	\State $k \gets k+1$
+\EndWhile
+\State\Return $x^{k-1}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Convergence}
+
+Algorithm \ref{alg_spSolve} is guaranteed to compute an approximation to the true solution to Equation \ref{eq_zxb}, $x_{\text{tru}}$,
+to within user specified tolerance $\epsilon$,
+on the condition that the update function $\Psi$ returns no updates only if the norm of the difference between $Zx^k$ and $Z_{\text{sp}}^k x^x$ is less than $\epsilon$.
+The proof is based on the fact that since there are a finite number of elements in the matrix $Z$,
+and at each iteration a solution has been found or more non-zero elements are added to $Z_{\text{sp}}$, eventually $Z_{\text{sp}}=Z$.
+This is formalized by the following theorem.
+\begin{theorem}\label{th_conv}
+	For any $\epsilon \geq 0$,
+	if $\Psi(x)=\emptyset \Rightarrow \norm{Zx-Z_{\text{sp}}x}<\epsilon$ for $x=Z_{\text{sp}}^{-1}b$,
+	then Algorithm \ref{alg_spSolve} computes a value $x^{k^*}$ such that $\norm{Zx^{k^*}-b}<\epsilon$.
+\end{theorem}
+\begin{proof}
+	First of all, for any $k$,
+	\begin{equation}
+		\norm{Zx^k - b} = \norm{Zx^k - Z_{\text{sp}}^k x^k + Z_{\text{sp}}^k x^k - b}
+		= \norm{Zx^k - Z_{\text{sp}}^k x^k}
+		\leq \norm{Z-Z_{\text{sp}}^k}\norm{x^k}.
+	\end{equation}
+	Now either there is a $k^*$ such that $\Psi(x)=\emptyset$ or there isn't.
+	Suppose there is. Then by the condition on $\Psi$ in the theorem statement,
+	\begin{equation}
+		\norm{Zx^{k^*} - b} = \norm{Zx^{k^*} - Z_{\text{sp}}^k x^{k^*}} < \epsilon.
+	\end{equation}
+	Now suppose that for all $k$, $\Psi(x) \ne \emptyset$.
+	Then after at most $N^2$ iterations, all entries in $Z$ will be in $Z_{\text{sp}}$.
+	So $\exists k^* \leq N^2$ such that $Z = Z_{\text{sp}}^{k^*}$ and therefore
+	\begin{equation}
+		\norm{Zx^{k^*} - b} \leq \norm{Z-Z_{\text{sp}}^{k^*}}\norm{x^{k^*}} = 0 < \epsilon.
+	\end{equation}
+	This concludes the proof.
+\end{proof}
+
+From this follows a bound between the true solution and the computed solution.
+\begin{corollary}
+	For any $\delta \geq 0$,
+	Algorithm \ref{alg_spSolve} computes a solution $x^{k^*}$,
+	such that $\norm{x^{k^*} - x_{\text{tru}}} \leq \delta$.
+\end{corollary}
+\begin{proof}
+\begin{equation}
+	\norm{x^{k^*} - x_{\text{tru}}} = \norm{Z^{-1}\left( Zx^{k^*} - b \right)}
+	\leq \norm{Z^{-1}} \norm{Zx^{k^*} - b}.
+\end{equation}
+So setting $\epsilon = \delta / \norm{Z^{-1}}$ in Theorem \ref{th_conv}, we have
+\begin{equation}
+	\norm{x^{k^*} - x_{\text{tru}}} \leq \delta.
+\end{equation}
+
+\end{proof}
+
+Though the proof of Theorem \ref{th_conv} doesn't indicate this, the convergence of the successive estimates of the solution should improve monotonically.
+For instance it can be shown for all $k$ that
+\begin{equation}
+	\norm{Z-Z_{\text{sp}}^{k+1}}_p \leq \norm{Z-Z_{\text{sp}}^{k}}_p
+\end{equation}
+for $p=1,\infty$.
+The error bound is therefore always decreasing.
+Unfortunately, this does not guarantee fast convergence.
 
 
-\section{Intro}\label{sec_intro}
 
+\section{Discussion}\label{sec_disc}
+
+
+Two points of the algorithm are worth discussing.
+Namely the issue of achieving rapid convergence and the fact that the terminal matrix
+$Z_{\text{sp}}^{k^*}$ implicitly depends on a specific RHS.
+These challenges would be difficult to overcome for general matrices,
+but for the impedance matrices associated with high frequency electromagnetic problems there is potential for solutions
+with relative ease.
+
+Computation of an accurate solution in just a few iterations will depend on the ability of the update function $\Psi$ to 
+swiftly identify elements in the matrix which represent the most significant interactions.
+For this to happen, there must first exist a sparse matrix such that $Z_{\text{sp}} x^* = Zx^* = b$.
+In the case of high frequency electromagnetics, the product of a row of $Z$ and the solution vector equates to an integral over the mesh
+involving a highly oscillatory term.
+By the stationary phase approximation described in Section \ref{sec_stationaryPhase},
+regions of the mesh where the solution is fairly smooth will not contribute significantly to the value of the integral.
+The entries in the row of $Z$ corresponding to these regions of smooth solution can be zeroed out.
+This demonstrates the existence of a sparse matrix $Z_{\text{sp}}^{k^*}$ which computes the same product as the original,
+hopefully for $k^* = \mathbb{O}(1)$.
+A concise and fast method of identifying the entries in the matrix which do contribute can hopefully be developed by examining
+the exact expression for the matrix-solution product and the conditions for the application of the stationary phase approximation.
+The majority of the remainder of this document is devoted to that.
+
+The sparsity pattern of the matrix $Z_{\text{sp}}$ will depend largely on the solution, which depends on the right hand side.
+In practice then, for electromagnetics problems, Algorithm \ref{alg_spSolve} will have to be applied to a single or only a few similar excitations at a time.
+This is unfortunate, however it is primarily only a limitation for monostatic sweeps.
+Furthermore, parallelization over multiple RHSs is conceptually trivial.
+Assuming a solution for any one RHS can be achieved efficiently, then a large enough HPC could achieve all solutions in a sweep efficiently.
 
 
 \section{Stationary Phase}\label{sec_stationaryPhase}
@@ -36,93 +197,165 @@
 % 1D example
 % include expression for stationary point from Pathak or wikipedia
 
+% intro about bounding highly oscillatory kernel
+%    repeated application of Green's identity/integration by parts creates an asymptotic expansion
+% present upper bound + conditions for its validity (qualitatively when F and S are smooth)
+% discuss: value of F is irrelevent except on the boundary. Contributions come from high gradients and when the operand is no longer smooth
+%
+
 The goal of this section is to show under what conditions an integral involving a
 highly oscillatory term produces an almost zero result.
 % TODO include those conditions here
 
+
+
+\subsection{Derivation of Upper Bound}
+
 Consider the integral on a manifold
 \begin{equation}
-    I = \int_\Omega f e^{ikS} \sqrt{g} \,dA,
+	I = \int_\Omega f e^{ikS} \sqrt{g} \,dA,
 \end{equation}
 in which $f$, $S$, and $g$ are functions of $x$, with dependence suppressed for simplicity.
 The domain $\Omega$ is assumed simple, meaning that any line through it intersects the boundary in exactly 2 places.
 For convenience, we absorb the square root of the metric determinant into $f$.
 \begin{equation}
-    I = \int_\Omega F e^{ikS} \,dA
+	I = \int_\Omega F e^{ikS} \,dA
 \end{equation}
 We now introduce the vector $\mathbf{v}$ that allows us to rewrite the integral as
 \begin{equation}
-    = \int_\Omega \frac{F}{ik\mathbf{v}\cdot\nabla S} \nabla\cdot\left( \mathbf{v}e^{ikS} \right) \,dA.
+	= \frac{1}{ik} \int_\Omega F \frac{\nabla\cdot\left( \mathbf{v}e^{ikS} \right)}{\mathbf{v}\cdot\nabla S} \,dA
 \end{equation}
-For this to be a valid reformulation, it must be the case that $\mathbf{v}\cdot\nabla S \neq 0$ for all $x\in\omega$.
+For this to be a valid reformulation, it must be the case that $\mathbf{v}\cdot\nabla S \neq 0$ for all $x\in\Omega$.
 Discussion of ther best choice of $\mathbf{v}$ is included later.
 At this point we make use of Green's Identity to rewrite the integral again as
 \begin{equation}
-    = \int_{\partial\Omega} \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
-    - \int_\Omega e^{ikS} \mathbf{v}\cdot\nabla\left( \frac{F}{ik\mathbf{v}\cdot\nabla S} \right) \,dA.
+	= \frac{1}{ik} \int_{\partial\Omega} \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+	- \frac{1}{ik} \int_\Omega \mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right) e^{ikS} \,dA.
 \end{equation}
-
-% TODO
-% make first term look like 2nd term
-% expand using product rule
-% move last term over to original integral and argue that the factor is small
-% Apply bound
-
-We now focus on the first term.
-
-% TODO
-% set up relationship among dL, \mathbf{t}, and \hat{n}
-
-
-The product rule is applied to the second term and the relationship $\mathbf{v}\cdot\nabla\left(\mathbf{v}\cdot\nabla S\right) = \mathbf{v}^TH_S\mathbf{v}$
-is used to achieve
+We can again rewrite the integral to get
 \begin{equation}
-    = \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F
-    - Fe^{ikS} \frac{\mathbf{v}^TH_S\mathbf{v}}{ ik\left(\mathbf{v}\cdot\nabla S\right)^2} \,dA.
+	= \frac{1}{ik} \int_{\partial\Omega} \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+	- \frac{1}{(ik)^2} \int_\Omega \mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right)
+	\frac{\nabla\cdot\left( \mathbf{v}e^{ikS} \right)}{\mathbf{v}\cdot\nabla S} \,dA,
 \end{equation}
-% TODO move last term over to original integral and argue that the factor is small
-% TODO use Taylor series to replace integrand on d\Omega with a value where the limits of integration are a multiple of 2\pi
-From this expression, the following bound is apparent
+and apply Green's Identity again to get
+\begin{multline}
+	= \frac{1}{ik} \int_{\partial\Omega} \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL \\
+	- \frac{1}{(ik)^2} \int_{\partial\Omega} \mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right)
+	\frac{e^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL \\
+	+ \frac{1}{(ik)^2} \int_{\Omega} \mathbf{v}\cdot\nabla\left( \frac{1}{\mathbf{v}\cdot\nabla S} 
+	\mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right) \right) e^{ikS} \,dA,
+\end{multline}
+and rewrite again to get
+\begin{multline}
+	= \frac{1}{ik} \int_{\partial\Omega} \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL \\
+	- \frac{1}{(ik)^2} \int_{\partial\Omega} \mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right)
+	\frac{e^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL \\
+	+ \frac{1}{(ik)^3} \int_{\Omega} \mathbf{v}\cdot\nabla\left( \frac{1}{\mathbf{v}\cdot\nabla S} 
+	\mathbf{v}\cdot\nabla\left( \frac{F}{\mathbf{v}\cdot\nabla S} \right) \right) \frac{\nabla\cdot\left( \mathbf{v}e^{ikS} \right)}{\mathbf{v}\cdot\nabla S} \,dA,
+\end{multline}
+And so on.
+
+We focus on the leading term, which is a path integral around the perimeter of the domain.
+Let the path be parameterized by the function $\Gamma(\xi):[-1,1]\rightarrow\partial\Omega$,
+then the differential $dL$ is given by the norm of the tangent vector
 \begin{equation}
-    \abs{ \int_\Omega \frac{ e^{ikS} }{ {ik\mathbf{v}\cdot\nabla S} } \mathbf{v}\cdot\nabla F \,dA }
-    \leq \frac{\abs{\Omega}}{k} \frac{\max\abs{\mathbf{v}\cdot\nabla F}}{\min\abs{\mathbf{v}\cdot\nabla S}}
+	dL = \norm{\mathbf{t}} d\xi = \norm{\frac{d\Gamma}{d\xi}} d\xi.
+\end{equation}
+The normal unit vector $\hat{n}$ is perpendicular to the tangent vector.
+It can be computed by applying a 90 degree rotation matrix to the tangent vector and then normalizing
+\begin{equation}
+	\mathbf{n} = \pm R\mathbf{t},
+	\quad
+	\hat{n} = \pm \frac{1}{\norm{\mathbf{t}}}R\mathbf{t},
+	\quad
+	R=\begin{bmatrix}
+		0 & -1 \\
+		1 & 0
+	\end{bmatrix}.
+\end{equation}
+The integral is thus
+\begin{equation}
+	\frac{1}{ik} \int_{\partial\Omega} \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \mathbf{v}\cdot\hat{n} \,dL
+	= \frac{1}{ik} \int_{-1}^1 \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma} \mathbf{v}\cdot\mathbf{n} \,d\xi
 \end{equation}
 
-
-
-We separate the boundary into two arcs, $\Gamma^+$ and $\Gamma^-$,
+% TODO Diagram of parameterization
+We further specify that the parameterization is in the form
+\begin{equation}
+	\Gamma(\xi) = 
+	\begin{cases} 
+		\Gamma^+(\xi) & \xi \geq 0 \\
+		\Gamma^-(\xi) & \xi < 0 \\
+	\end{cases}
+\end{equation}
+We now separate the boundary into two arcs, $\Gamma^+$ and $\Gamma^-$,
 which are respectively the portions of the domain where $\mathbf{v}\cdot\hat{n} > 0$ and $\mathbf{v}\cdot\hat{n} < 0$.
-The arcs are parameterized by the variable $\xi$ in such a way that
+Because the domain is simple, each line parallel to $\mathbf{v}$ will exactly once enter the domain at a point where $\mathbf{v}\cdot\hat{n} < 0$
+and exit the domain at a point where $\mathbf{v}\cdot\hat{n} > 0$.
+We can therefore design the parameterization such that for $\xi \geq 0$,
 \begin{equation}
-	\Gamma^+(\xi) - \Gamma^-(\xi) = \alpha(\xi)\mathbf{v},
+	\Gamma^+(\xi) - \Gamma^-(-\xi) = \alpha(\xi)\mathbf{v},
 \end{equation}
 where $\alpha(\xi)$ is a scalar function.
-The tangent vectors for the arcs are given by
+This gives us the relationship between the tangent vectors $\mathbf{t}^\pm = \frac{d\Gamma}{d\xi}^\pm$,
 \begin{equation}
-	\mathbf{t}^\pm = \frac{d\Gamma}{d\xi}^\pm.
+	\mathbf{t}^+(\xi) + \mathbf{t}^-(-\xi) = \frac{d\alpha}{d\xi}(\xi)\mathbf{v}.
 \end{equation}
-We thus get
+Multiplying this by the rotation matrix we get
 \begin{equation}
-	\mathbf{t}^+(\xi) - \mathbf{t}^-(\xi) = \frac{d\alpha}{d\xi}(\xi)\mathbf{v}.
+	\mathbf{n}^+(\xi) + \mathbf{n}^-(-\xi) = \frac{d\alpha}{d\xi}(\xi)R\mathbf{v}.
 \end{equation}
-Multiplying by the rotation matrix we get
+And dotting with $\mathbf{v}$ gives us
 \begin{equation}
-	\mathbf{n}^+(\xi) + \mathbf{n}^-(\xi) = \frac{d\alpha}{d\xi}(\xi)R\mathbf{v}.
+	\mathbf{v}\cdot\mathbf{n}^+(\xi) + \mathbf{v}\cdot\mathbf{n}^-(-\xi) = 0,
 \end{equation}
-We now multiply by $\mathbf{v}$ to get
+and finally
 \begin{equation}
-	\mathbf{v}\cdot\mathbf{n}^+(\xi) + \mathbf{v}\cdot\mathbf{n}^-(\xi) = 0,
+	\mathbf{v}\cdot\mathbf{n}^+(\xi) = -\mathbf{v}\cdot\mathbf{n}^-(-\xi).
 \end{equation}
-and so finally
+The dot products with the normals of the two paths are of equal magnitude and of opposite sign.
+This fact allows us to rewrite the path integral as
 \begin{equation}
-	\mathbf{v}\cdot\mathbf{n}^+(\xi) = -\mathbf{v}\cdot\mathbf{n}^-(\xi).
+	\frac{1}{ik} \int_{-1}^1 \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma} \mathbf{v}\cdot \mathbf{n} \,d\xi
+	= \frac{1}{ik} \int_{0}^1 \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^+} \mathbf{v}\cdot \mathbf{n}^+ \,d\xi
+	- \frac{1}{ik} \int_{0}^{-1} \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-} \mathbf{v}\cdot \mathbf{n}^- \,d\xi
 \end{equation}
-The path integral is now given by
 \begin{equation}
-	 \int \left( \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S}\rvert_{\Gamma^+}
-	 - \frac{Fe^{ikS}}{ik\mathbf{v}\cdot\nabla S}\rvert_{\Gamma^-} \right)\mathbf{v}\cdot\mathbf{n}^+ \,d\xi
+	= \frac{1}{ik} \int_{0}^1 \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^+(\xi)} \mathbf{v}\cdot \mathbf{n}^+(\xi)
+	+ \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-(-\xi)} \mathbf{v}\cdot \mathbf{n}^-(-\xi) \,d\xi
 \end{equation}
-
+\begin{equation}
+	= \frac{1}{ik} \int_0^1 \left( \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^+(\xi)}
+	- \left. \frac{Fe^{ikS}}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-(-\xi)}
+	\right) \mathbf{v}\cdot\mathbf{n}^+(\xi) \,d\xi
+\end{equation}
+\begin{multline}
+	= \frac{1}{ik} \int_0^1 e^{ikS\left( \Gamma^-(-\xi) \right)}
+	\left( \left. \frac{F}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^+(\xi)}
+	\left( e^{ikS\left( \Gamma^+(\xi) - \Gamma^-(-\xi) \right)} -1\right)
+	\right) \mathbf{v}\cdot\mathbf{n}^+(\xi) \\
+	+ e^{ikS\left( \Gamma^-(-\xi) \right)} \left(
+	\left. \frac{F}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^+(\xi)}
+	- \left. \frac{F}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-(-\xi)}
+	\right) \mathbf{v}\cdot\mathbf{n}^+(\xi) \,d\xi
+\end{multline}
+We refer to the first integral as $I_{\partial\Omega}$ for short,
+and replace the second term with a line integral of the gradient from $\Gamma^+(\xi)$ to $\Gamma^-(-\xi)$.
+\begin{equation}
+	= \frac{1}{ik} I_{\partial\Omega}
+	+ e^{ikS\left( \Gamma^-(-\xi) \right)} 
+	\int_0^{\norm{\Gamma^+(\xi) - \Gamma^-(\xi)}} \mathbf{v}\cdot\nabla\left(
+	\left. \frac{F}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-(\xi) + \eta\mathbf{v}}
+	\right) \,d\eta \, \mathbf{v}\cdot\mathbf{n}^+(\xi) \,d\xi
+\end{equation}
+\begin{equation}
+	= \frac{1}{ik} I_{\partial\Omega}
+	+ \frac{1}{ik} \int_0^1 \int_0^{\norm{\Gamma^+(\xi) - \Gamma^-(\xi)}}
+	e^{ikS\left( \Gamma^-(-\xi) \right)} \mathbf{v}\cdot\nabla\left(
+	\left. \frac{F}{\mathbf{v}\cdot\nabla S} \right\rvert_{\Gamma^-(\xi) + \eta\mathbf{v}}
+	\right) \mathbf{v}\cdot\mathbf{n}^+(\xi) \,d\eta \,d\xi
+\end{equation}
 We now introduce the coordinate transformation
 \begin{equation}
 	x(\xi,\eta) = \Gamma^-(\xi) + \eta\mathbf{v},
@@ -139,18 +372,68 @@ the Jacobian of which satisfies the relationship
 	= \abs{ \mathbf{v}\cdot\mathbf{n}^- }
 	= \mathbf{v}\cdot\mathbf{n}^+.
 \end{equation}
-This transformation allows us put integral back in terms of the original vairables
+This transformation allows us to put the second integral back in terms of the original vairables
 \begin{equation}
-	\frac{1}{ik} \int_\Omega \mathbf{v}\cdot\nabla\left(\frac{F}{\nabla S}\right) \,dA.
+	= \frac{1}{ik} I_{\partial\Omega}
+	+ \frac{1}{ik} \int_\Omega
+	e^{ikS\left( \Gamma^-\left(-\xi(x)\right) \right)} \mathbf{v}\cdot\nabla\left(
+	\frac{F}{\mathbf{v}\cdot\nabla S} 
+	\right) \,dA
+\end{equation}
+We now expand the gradient using the product rule
+\begin{equation}
+	= \frac{1}{ik} I_{\partial\Omega}
+	+ \frac{1}{ik} \int_\Omega
+	e^{ikS\left( \Gamma^-\left(-\xi(x)\right) \right)} \left(
+	\frac{\mathbf{v}\cdot\nabla F}{\mathbf{v}\cdot\nabla S}
+	- F\frac{\mathbf{v}\cdot H_S\cdot\mathbf{v}}{(\mathbf{v}\cdot\nabla S)^2} 
+	\right) \,dA
 \end{equation}
 
 
-\section{Taylor Series}
+\begin{equation}
+	\abs{ \int_\Omega Fe^{ikS} \,dA }
+	\approx \abs{ \int_\Omega \left( 1 + e^{ik\left[S\left( \Gamma^-\left(-\xi(x)\right) \right)-S(x)\right]}
+	\frac{\mathbf{v}\cdot H_S\cdot\mathbf{v}}{(\mathbf{v}\cdot\nabla S)^2} \right)Fe^{ikS} \,dA }
+\end{equation}
+\begin{equation}
+	\approx \abs{ \frac{1}{ik} I_{\partial\Omega}
+	+ \frac{1}{ik} \int_\Omega
+	e^{ikS\left( \Gamma^-\left(-\xi(x)\right) \right)}
+	\frac{\mathbf{v}\cdot\nabla F}{\mathbf{v}\cdot\nabla S} \,dA }
+\end{equation}
+\begin{equation}
+	\leq \frac{ \abs{ I_{\partial\Omega} } }{k}
+	+ \frac{\abs{\Omega}}{k} \max_{x\in\Omega}\frac{\abs{\mathbf{v}\cdot\nabla F}}{\abs{\mathbf{v}\cdot\nabla S}}
+\end{equation}
 
+% TODO Doesn't work if \nabla S \approx 0
+% TODO Cone of influence
+
+
+
+
+\section{Method of Moments}\label{sec_mom}
+
+% MOM EFIE formulation
+% Highlight oscillatory part
+% \grad R on a surface
+For a PEC,
+\begin{equation}
+	\mathbf{E} = \int_\Omega \frac{e^{-ikR}}{4\pi R}
+	\left( i\omega\mu_0\mathbf{J} 
+	+ \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \nabla R (\nabla\cdot\mathbf{J}) \right).
+\end{equation}
+
+
+\section{Taylor Expansion}\label{sec_taylor}
+
+% want to get error bound for a given frequency - hopefully can integrate e^ikS'(x-x0) analytically |I| <= 2/k, also f'(x-x0)e^ikS'(x-x0)
+% state conditions for integral to be approximately zero \phi >> 1/k >> grad f \cdot grad \phi
 
 % pick domain - start on the manifold
 % TODO describe the problem set up better
-Consider the integral
+Consider the integral on a manifold
 \begin{equation}
 	I = \int\int f(x) e^{ikS(x)} \sqrt{g} dx_1dx_2.
 \end{equation}
@@ -169,7 +452,7 @@ Thus
 	I \approx \int\int \left[ F(x^*) + \nabla F(x^*) \cdot (x-x^*) \right] e^{ik\left[S(x^*) + \nabla S(x^*)\cdot (x-x^*) \right]} dx_1dx_2.
 \end{equation}
 We assume that $\frac{dS}{dx_2}(x^*) = 0$ and consequently $\frac{dS}{dx_1}(x^*) = \norm{\nabla S(x^*)}$.
-If this is not already the case, a new coordinate system can be introduced for which it is. See \ref{sec_rotation}.
+If this is not already the case, a new coordinate system can be introduced for which it is. See Section \ref{sec_rotation} for details.
 
 
 % sort terms and integrate
@@ -192,11 +475,9 @@ We now have
 % e^ikSx - note that (e^i\pi)^2n - 1 = 0
 % x eikSx
 
-Consider the integral
+Consider first the integral
 \begin{equation}
-	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 
-	= \frac{e^{ik\norm{\nabla S(x^*)}(A-x^*)}}{ik\norm{\nabla S(x^*)}}
-	\left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
+	I_1 = \int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1*)} dx_1 = \frac{e^{ik\norm{\nabla S(x^*)}A}}{ik\norm{\nabla S(x^*)}} \left( e^{ik\norm{\nabla S(x^*)}(B-A)}-1 \right).
 \end{equation}
 This shows that
 \begin{equation}
@@ -205,26 +486,22 @@ This shows that
 independent of the domain of integration.
 In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\mathbb{N}$.
 
-Now consider the integral 
-\begin{equation*}
-	I_2 = \int_A^B (x_1-x_1^*) e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1
-\end{equation*}
-\begin{equation}
-	= \left[ \frac{(x_1-x_1^*)}{ik\norm{\nabla S(x^*)}} e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} \right]_A^B
-	- \frac{1}{ik\norm{\nabla S(x^*)}}\int_A^B e^{ik\norm{\nabla S(x^*)}(x_1-x_1^*)} dx_1
-\end{equation}
 
 
 
-\section{Fourier Transform}
+
+% want to get error bound for a given frequency - hopefully can integrate e^ikS'(x-x0) analytically |I| <= 2/k, also f'(x-x0)e^ikS'(x-x0)
+% state conditions for integral to be approximately zero \phi >> 1/k >> grad f \cdot grad \phi
+% TODO
+% Set up rectangular patch - for fourier series in particular
+% include expression for stationary point
+
+
+\section{Fourier Expansion}\label{sec_fourier}
 
 % pick domain - start on the manifold
 % TODO describe the problem set up better
-Consider the integral on a manifold
-\begin{equation}
-	I = \int\int f(x) e^{ikS(x)} \sqrt{g} dx_1dx_2.
-\end{equation}
-For convenience, we absorb the metric into the function as  $F = f\sqrt{g}$.
+We again consider the integral established in Section \ref{sec_taylor}.
 \begin{equation}
 	I = \int\int F(x) e^{ikS(x)} dx_1dx_2
 \end{equation}
@@ -238,8 +515,7 @@ Thus
 \begin{equation}
 	I \approx \int\int F(x) e^{ik\left(S(x^*) + \nabla S(x^*)\cdot (x-x^*) \right)} dx_1dx_2.
 \end{equation}
-We assume that $\frac{dS}{dx_2}(x^*) = 0$ and consequently $\frac{dS}{dx_1}(x^*) = \norm{\nabla S(x^*)}$.
-If this is not already the case, a new coordinate system can be introduced for which it is. See \ref{sec_rotation} for details.
+We again assume the coordinates are aligned with $\nabla S(x^*)$ as described in Section \ref{sec_rotation}.
 
 
 % Fourier transform
@@ -278,11 +554,10 @@ The integral over $x_1$ is
 \end{equation}
 This shows that
 \begin{equation}
-	|I_1| \leq \frac{2}{k\norm{\nabla S(x^*)} + \frac{2\pi n}{ \Delta x_1 }},
+	|I_1| \leq \frac{2}{k\norm{\nabla S(x^*)}},
 \end{equation}
 independent of the domain of integration.
 In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\mathbb{N}$.
-
 
 
 
@@ -292,17 +567,65 @@ In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\math
 % rotate coordinates to align with grad S at expansion point
 %	include grad S in rotation matrix
 
+Given a function $S$ and a point $x^*$ it is always possible to create a coordinate system (with coordinates $\xi_i$)
+which aligns with $\nabla S(x^*)$.
+This will be used to replace the expression $\nabla S(x^*)\cdot(x-x^*)$ with $\frac{dS}{d\xi_1}(\xi^*)(\xi_1-\xi_1^*)$.
 
+Given $\nabla S(x^*)$, we define the matrix
+\begin{equation}
+	J =
+	\begin{bmatrix}
+		\frac{ \nabla S }{ \norm{\nabla S} } & \hat{t}
+	\end{bmatrix}
+	=
+	\frac{1}{\sqrt{\frac{dS}{dx_1}^2 + \frac{dS}{dx_2}^2}}
+	\begin{bmatrix}
+		\frac{dS}{dx_1} & -\frac{dS}{dx_2} \\
+		\frac{dS}{dx_2} & \frac{dS}{dx_1}
+	\end{bmatrix}
+\end{equation}
+where the evaluation of all quantities at $x^*$ has been suppressed.
+The matrix $J$ is unitary and so represents a pure rotation.
+The new coordinates are defined by
+\begin{equation}
+	J(\xi-\xi^*) = (x-x^*),
+\end{equation}
+which yields
+\begin{equation}
+	\frac{dx_i}{d\xi_j} = J_{ij}
+\end{equation}
+and
+\begin{equation}
+	\xi^*=x^*.
+\end{equation}
 
-
-
-
-
-
-
-
-
-
+Transforming $\nabla S(x^*)$ is as following
+\begin{equation}
+	\nabla_\xi S(\xi^*) = \frac{dS}{d\xi_j}(\xi^*) = \frac{dS}{dx_i}(x^*)\frac{dx_i}{d\xi_j}(x^*) = J_{ij}\frac{dS}{dx_i}(x^*) = J^T\nabla_x S(x^*).
+\end{equation}
+Thus
+\begin{equation}
+	\nabla_\xi S(\xi^*) = 
+	\begin{bmatrix}
+		\norm{\nabla S(x^*)} & 0
+	\end{bmatrix}
+\end{equation}
+and also
+\begin{equation}
+	J\nabla_\xi S(\xi^*) = \nabla_x S(x).
+\end{equation}
+This yields the transformation
+\begin{equation*}
+	\nabla S(x^*)\cdot(x-x^*) = \nabla S(x^*)^T(x-x^*) = \nabla_\xi S(\xi^*)^T J^T J(\xi-\xi^*) = \nabla_\xi S(\xi^*)\cdot(\xi-\xi^*)
+\end{equation*}
+\begin{equation}
+	= \frac{dS}{d\xi_1}(\xi^*)(\xi_1-\xi_1^*).
+\end{equation}
+As final note, for any function $f$, one still gets
+\begin{equation}
+	\nabla f(x^*)\cdot(x-x^*) = \nabla_\xi f(\xi^*)\cdot(\xi-\xi^*),
+\end{equation}
+but there is no guarantee on the alignment of $\nabla_\xi f(\xi^*)$ with the coordinate lines.
 
 
 
@@ -317,6 +640,3 @@ In particular, $|I_1| = 0$ for $B-A = 2n\pi / k\norm{\nabla S(x^*)}$, $n\in\math
 
 
 \end{document}
-
-
-
