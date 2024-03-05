@@ -68,8 +68,24 @@ We now have the integral
 \begin{equation}
 	\int_0^\infty \int_0^{2\pi} \frac{e^{-ik(r+\norm{\mathbf{b}_J}r\cos{\theta} + \mathbf{b}_J\cdot x + c_J)}}{4\pi r}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{r} \right) \,rd\theta dr,
+	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) <\cos{\theta},\sin{\theta}> \right) \,rd\theta dr,
 \end{equation}
+\begin{multline}
+	=i\omega\mu_0 \mathbf{A}_J\frac{e^{-ik(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
+	\int_0^\infty e^{-ikr} \int_0^{2\pi} e^{-ik\norm{\mathbf{b}_J}r\cos{\theta}} \,drd\theta \\
+	+ \frac{k}{\omega\epsilon_0}(\mathbf{A}_J\cdot\mathbf{b})\frac{e^{-ik(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
+	\int_0^\infty e^{-ikr}\left( ik + \frac{1}{r} \right) \int_0^{2\pi} e^{-ik\norm{\mathbf{b}_J}r\cos{\theta}} <\cos{\theta},\sin{\theta}> \,drd\theta
+\end{multline}
+
+
+
+
+
+
+
+
+
+
 % solve for J plane wave parameters
 
 
