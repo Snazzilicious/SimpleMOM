@@ -34,4 +34,9 @@ simple_gradygradxG = [ [ sp.simplify( exp.subs( R, r ) ) for exp in rowG ] for r
 
 
 
+# Integrating the Green's integral
+a,b,r = sp.symbols("a b r",real=True)
+sp.integrate( sp.cos(r)*sp.sin(r), (r,0,2*sp.pi) )
+sp.integrate( sp.exp(-sp.I*a*r)*sp.besselj(0,b*r) , (r,0,sp.oo) )
+# -I*b**2 / ( a**2 - b**2 ), a**2 > b**2 // -b**2/sqrt(a**2 - b**2), o/w
 
