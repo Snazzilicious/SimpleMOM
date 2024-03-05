@@ -36,7 +36,7 @@ The currents induced may be computed by solving the EFIE problem
 \begin{equation}
 	-\hat{n}\times\mathbf{E}_i(x) = \hat{n}\times\int_\Omega \frac{e^{-ikR}}{4\pi R}
 	\left( i\omega\mu_0\mathbf{J} 
-	- \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} (\nabla\cdot\mathbf{J}) \right) \,dx',
+	+ \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} (\nabla\cdot\mathbf{J}) \right) \,dx',
 \end{equation}
 \begin{equation}
 	R = \norm{x-x'}.
@@ -57,7 +57,7 @@ The explicit integral is
 	-\hat{n}\times\mathbf{A}_Ee^{-ik(\mathbf{b}_E\cdot x + c_E)}
 	= \hat{n}\times\int_\Omega \frac{e^{-ik(R+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	- \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
+	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
 \end{equation}
 % integrate both terms - get your Bessel Functions ready
 It is helpful to convert to a radial coordinate system given by
@@ -68,7 +68,7 @@ We now have the integral
 \begin{equation}
 	\int_0^\infty \int_0^{2\pi} \frac{e^{-ik(r+\norm{\mathbf{b}_J}r\cos{\theta} + \mathbf{b}_J\cdot x + c_J)}}{4\pi r}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	- \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{r} \right) \,rd\theta dr,
+	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{r} \right) \,rd\theta dr,
 \end{equation}
 % solve for J plane wave parameters
 

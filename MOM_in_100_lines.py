@@ -46,17 +46,17 @@ scenarios.extend([ PlaneWaveScenario( np.array([np.cos(th),np.sin(th),0]), np.ar
 # Fill Matrix and RHSs
 # helper functions
 def G( R ):
-	return np.exp( 1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
+	return np.exp( -1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
 
 def gradxG( x,y ):
 	dx = x-y
 	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1, y.shape[-1] ))
-	return dx * ( 1j * k * R - 1 ) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 )
+	return -dx * ( 1j * k * R + 1 ) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 )
 
 def gradygradxG_1( R ):
-	return (R**2*k**2 + 3j*R*k - 3) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
+	return (R**2*k**2 - 3*I*R*k - 3) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
 def gradygradxG_2( R ):
-	return (R**2 - 1j*R**3*k) * np.exp( 1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
+	return (R**2 + 1j*R**3*k) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
 
 # Galerkin integrals of basis functions and Green's functions
 dx = (pts.reshape((-1,3,1))-pts.reshape((-1,3,1)).T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
