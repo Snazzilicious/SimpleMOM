@@ -57,10 +57,10 @@ The explicit integral is
 	-\hat{n}\times\mathbf{A}_Ee^{-i(\mathbf{b}_E\cdot x + c_E)}
 	= \hat{n}\times\int_\Omega \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
+	- \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx',
 \end{equation}
 % integrate both terms - get your Bessel Functions ready
-It is helpful to convert to a radial coordinate system given by
+It is helpful to convert to a polar coordinate system given by
 \begin{equation}
 	x'_1-x_1 = r\cos{\theta} \text{ and } x'_2-x_2 = r\sin{\theta}, \quad\text{or}\quad r = R \text{ and } \theta = \tan^{-1}{\frac{x'_2 - x_2}{x'_1 - x_1}}.
 \end{equation}
@@ -68,7 +68,7 @@ We now have the integral
 \begin{equation}
 	\int_0^\infty \int_0^{2\pi} \frac{e^{-i(kr+\norm{\mathbf{b}_J}r\cos{\theta} + \mathbf{b}_J\cdot x + c_J)}}{4\pi r}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right)(\mathbf{A}_J\cdot\mathbf{b}) <\cos{\theta},\sin{\theta}> \right) \,rd\theta dr,
+	+ \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right) <\cos{\theta},\sin{\theta}> \right) \,rd\theta dr,
 \end{equation}
 \begin{multline}
 	=i\omega\mu_0 \mathbf{A}_J\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
@@ -99,6 +99,7 @@ The integral is now
 \begin{equation}
 	= \frac{\omega\mu_0\norm{\mathbf{b}_J}^2}{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}.
 \end{equation}
+% solve for J plane wave parameters
 We can now solve
 \begin{equation}
 	-\hat{n}\times\mathbf{A}_E e^{-i(\mathbf{b}_E\cdot x + c_E)}
@@ -106,17 +107,31 @@ We can now solve
 \end{equation}
 by setting
 \begin{equation}
-	c_J = c_E, \quad\quad \mathbf{b}_J = \mathbf{b}_E, \quad\text{and}\quad
-	\mathbf{A}_J = \pm \frac{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)}{\omega\mu_0\norm{\mathbf{b}_J}^2} \hat{n}\times( \hat{n}\times\mathbf{A}_E )
+	\mathbf{A}_J = \pm \frac{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)}{\omega\mu_0\norm{\mathbf{b}_J}^2} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
+	\quad\quad \mathbf{b}_J = \mathbf{b}_E,
+	\quad\text{and}\quad c_J = c_E
 \end{equation}
+% TODO get sign right for A AND update expression for b
+
+% compute field at a distance
+The electric field induced by this current function is 
+\begin{equation}
+	E_s(x)
+	= \int_\Omega \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
+	\left( i\omega\mu_0 \mathbf{A}_J
+	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
+\end{equation}
+For positions $x$ off the scattering plane, 
+
+% set h to be a large number
 
 
 
+% coordinate change
 
 
+% stationary phase
 
-
-% solve for J plane wave parameters
 
 
 
