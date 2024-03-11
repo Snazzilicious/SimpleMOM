@@ -107,11 +107,11 @@ We can now solve
 \end{equation}
 by setting
 \begin{equation}
-	\mathbf{A}_J = \pm \frac{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)}{\omega\mu_0\norm{\mathbf{b}_J}^2} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
+	\mathbf{A}_J = \frac{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)}{\omega\mu_0\norm{\mathbf{b}_J}^2} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
 	\quad\quad \mathbf{b}_J = \mathbf{b}_E,
 	\quad\text{and}\quad c_J = c_E
 \end{equation}
-% TODO get sign right for A AND update expression for b
+% TODO update expression for b
 
 % compute field at a distance
 The electric field induced by this current function is 
@@ -123,24 +123,55 @@ The electric field induced by this current function is
 \end{equation}
 For positions $x$ off the scattering plane, 
 
+
+% fix x (test/sink) position
+% coordinate change of primed variables
+
+
 % set h to be a large number
 
 
-
-% coordinate change
 
 
 % stationary phase
 
 
 
+\begin{equation}
+	R = \sqrt{ \left(x_1-x_1'\right)^2 + \left(x_2-x_2'\right)^2 + x_3^2 }
+	= x_3\sqrt{ \frac{\left(x_1-x_1'\right)^2}{x_3} + \frac{\left(x_2-x_2'\right)^2}{x_3} + 1 }
+	= x_3\sqrt{ y_1^2 + y_2^2 + 1 }
+\end{equation}
+
+\begin{equation}
+	y_i = \frac{x_i-x_i'}{x_3}
+\end{equation}
+
+\begin{equation}
+	x' = x - x_3y
+\end{equation}
+
+\begin{equation}
+	e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}
+	= e^{-i\left(x_3\left(k\sqrt{ y_1^2 + y_2^2 + 1 }-\mathbf{b}_J\cdot y\right) + \mathbf{b}_J\cdot x + c_J \right)}
+\end{equation}
+
+\begin{equation}
+	\frac{ky}{\sqrt{ y_1^2 + y_2^2 + 1 }} = \mathbf{b}_J
+\end{equation}
+
+\begin{equation}
+	k(\hat{R} - (\hat{n}\cdot\hat{R})\hat{n}) = \mathbf{b}_E - (\hat{n}\cdot\mathbf{b}_E)\hat{n}
+\end{equation}
+\begin{equation}
+	k\hat{R} - \mathbf{b}_E = \hat{n}\cdot\left( k\hat{R} - \mathbf{b}_E \right)\hat{n}
+\end{equation}
+\begin{equation}
+	\hat{R} 
+\end{equation}
 
 
-
-
-
-
-
+pretty sure integral comes out to be -i / \sqrt{k^2-b^2}
 
 
 \end{document}
