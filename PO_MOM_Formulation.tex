@@ -97,17 +97,17 @@ The integral is now
 	\int_0^\infty e^{-ikr} J_0(\norm{\mathbf{b}_J}r) dr
 \end{equation}
 \begin{equation}
-	= \frac{\omega\mu_0\norm{\mathbf{b}_J}^2}{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}.
+	= \frac{\omega\mu_0}{2\sqrt{k^2 - \norm{\mathbf{b}_J}^2}} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}.
 \end{equation}
 % solve for J plane wave parameters
 We can now solve
 \begin{equation}
 	-\hat{n}\times\mathbf{A}_E e^{-i(\mathbf{b}_E\cdot x + c_E)}
-	= \hat{n}\times\frac{\omega\mu_0\norm{\mathbf{b}_J}^2}{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}
+	= \hat{n}\times\frac{\omega\mu_0}{2\sqrt{k^2 - \norm{\mathbf{b}_J}^2}} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}
 \end{equation}
 by setting
 \begin{equation}
-	\mathbf{A}_J = \frac{2\left(k^2 - \norm{\mathbf{b}_J}^2\right)}{\omega\mu_0\norm{\mathbf{b}_J}^2} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
+	\mathbf{A}_J = \frac{2\sqrt{k^2 - \norm{\mathbf{b}_J}^2}}{\omega\mu_0} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
 	\quad\quad \mathbf{b}_J = \mathbf{b}_E,
 	\quad\text{and}\quad c_J = c_E
 \end{equation}
@@ -119,7 +119,7 @@ The electric field induced by this current function is
 	E_s(x)
 	= \int_\Omega \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	+ \frac{k}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right)(\mathbf{A}_J\cdot\mathbf{b}) \hat{R} \right) \,dx',
+	- \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx',
 \end{equation}
 For positions $x$ off the scattering plane, 
 
@@ -171,7 +171,7 @@ For positions $x$ off the scattering plane,
 \end{equation}
 
 
-pretty sure integral comes out to be -i / \sqrt{k^2-b^2}
+%pretty sure integral comes out to be -i / \sqrt{k^2-b^2}
 
 
 \end{document}
