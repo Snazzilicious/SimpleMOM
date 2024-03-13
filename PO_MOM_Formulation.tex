@@ -31,12 +31,12 @@
 
 \section{Introduction}\label{sec_intro}
 
-Consider an infinite plane wave incident on an infinite planar PEC surface.
-The currents induced may be computed by solving the EFIE problem
+Consider an infinite plane wave incident on an infinite planar PEC surface with normal in the positive $\hat{x}_3$ direction.
+The currents induced on the surface of the plane may be computed by solving the EFIE problem
 \begin{equation}
-	-\hat{n}\times\mathbf{E}_i(x) = \hat{n}\times\int_\Omega \frac{e^{-ikR}}{4\pi R}
+	-\hat{n}\times\mathbf{E}_i(x)\rvert_{x_3=0} = \hat{n}\times\int_{\mathbb{R}^2} \frac{e^{-ikR}}{4\pi R}
 	\left( i\omega\mu_0\mathbf{J} 
-	+ \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} (\nabla\cdot\mathbf{J}) \right) \,dx',
+	+ \frac{1}{i\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} (\nabla\cdot\mathbf{J}) \right) \,dx'_1dx'_2,
 \end{equation}
 \begin{equation}
 	R = \norm{x-x'}.
@@ -44,23 +44,26 @@ The currents induced may be computed by solving the EFIE problem
 % Plug in plane wave for E and J
 The incident plane wave is given by
 \begin{equation}
-	\mathbf{E}_i = \mathbf{A}_Ee^{-i(\mathbf{b}_E\cdot x + c_E)}.
+	\mathbf{E}_i = \mathbf{A}_Ee^{-i(\mathbf{b}_E\cdot x + c_E)},
 \end{equation}
-% TODO expression for E_i on/at the surface - Assume normal to plane is zHat
+and on the surface by
+\begin{equation}
+	\mathbf{E}_i\lvert_{x_3=0} = \mathbf{A}_Ee^{-i\left( \left(\mathbf{b}_E - (\mathbf{b}_E\cdot\hat{n})\hat{n}\right)\cdot x + c_E \right)}.
+\end{equation}
 We propose that the current also takes the form of a plane wave
 \begin{equation}
 	\mathbf{J} = \mathbf{A}_Je^{-i(\mathbf{b}_J\cdot x + c_J)}.
 \end{equation}
 Computing the integral will allow us to fill in the values of $A_J$, $b_J$, and $c_J$.
 The explicit integral is
-\begin{equation}
-	-\hat{n}\times\mathbf{A}_Ee^{-i(\mathbf{b}_E\cdot x + c_E)}
-	= \hat{n}\times\int_\Omega \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
+\begin{multline}
+	-\hat{n}\times\mathbf{A}_Ee^{-i\left( \left(\mathbf{b}_E - (\mathbf{b}_E\cdot\hat{n})\hat{n}\right)\cdot x + c_E \right)} \\
+	= \hat{n}\times\int_{\mathbb{R}^2} \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	- \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx',
-\end{equation}
+	- \frac{(\mathbf{A}_J\cdot\mathbf{b}_J)}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx'_1dx'_2,
+\end{multline}
 % integrate both terms - get your Bessel Functions ready
-It is helpful to convert to a polar coordinate system given by
+It is helpful to assume WLOG that $\mathbf{b}_J$ points in the positive $\hat{x}_1$ direction and convert to a polar coordinate system given by
 \begin{equation}
 	x'_1-x_1 = r\cos{\theta} \text{ and } x'_2-x_2 = r\sin{\theta}, \quad\text{or}\quad r = R \text{ and } \theta = \tan^{-1}{\frac{x'_2 - x_2}{x'_1 - x_1}}.
 \end{equation}
@@ -68,12 +71,12 @@ We now have the integral
 \begin{equation}
 	\int_0^\infty \int_0^{2\pi} \frac{e^{-i(kr+\norm{\mathbf{b}_J}r\cos{\theta} + \mathbf{b}_J\cdot x + c_J)}}{4\pi r}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	+ \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right) <\cos{\theta},\sin{\theta}> \right) \,rd\theta dr,
+	+ \frac{(\mathbf{A}_J\cdot\mathbf{b}_J)}{\omega\epsilon_0}\left( ik + \frac{1}{r} \right) <\cos{\theta},\sin{\theta}> \right) \,rd\theta dr,
 \end{equation}
 \begin{multline}
 	=i\omega\mu_0 \mathbf{A}_J\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
 	\int_0^\infty e^{-ikr} \int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} \,d\theta dr \\
-	+ \frac{k}{\omega\epsilon_0}(\mathbf{A}_J\cdot\mathbf{b})\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
+	+ \frac{k}{\omega\epsilon_0}(\mathbf{A}_J\cdot\mathbf{b}_J)\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
 	\int_0^\infty e^{-ikr}\left( ik + \frac{1}{r} \right) \int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} <\cos{\theta},\sin{\theta}> \,d\theta dr.
 \end{multline}
 An important identity for computing this is
@@ -102,13 +105,13 @@ The integral is now
 % solve for J plane wave parameters
 We can now solve
 \begin{equation}
-	-\hat{n}\times\mathbf{A}_E e^{-i(\mathbf{b}_E\cdot x + c_E)}
+	-\hat{n}\times\mathbf{A}_E e^{-i\left( \left(\mathbf{b}_E - (\mathbf{b}_E\cdot\hat{n})\hat{n}\right)\cdot x + c_E \right)}
 	= \hat{n}\times\frac{\omega\mu_0}{2\sqrt{k^2 - \norm{\mathbf{b}_J}^2}} \mathbf{A}_J e^{-i(\mathbf{b}_J\cdot x + c_J)}
 \end{equation}
 by setting
 \begin{equation}
 	\mathbf{A}_J = \frac{2\sqrt{k^2 - \norm{\mathbf{b}_J}^2}}{\omega\mu_0} \hat{n}\times( \hat{n}\times\mathbf{A}_E ),
-	\quad\quad \mathbf{b}_J = \mathbf{b}_E,
+	\quad\quad \mathbf{b}_J = \mathbf{b}_E - (\mathbf{b}_E\cdot\hat{n})\hat{n},
 	\quad\text{and}\quad c_J = c_E
 \end{equation}
 % TODO update expression for b
@@ -119,10 +122,43 @@ The electric field induced by this current function is
 	E_s(x)
 	= \int_\Omega \frac{e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}}{4\pi R}
 	\left( i\omega\mu_0 \mathbf{A}_J
-	- \frac{(\mathbf{A}_J\cdot\mathbf{b})}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx',
+	- \frac{(\mathbf{A}_J\cdot\mathbf{b}_J)}{\omega\epsilon_0}\left( ik + \frac{1}{R} \right) \hat{R} \right) \,dx',
 \end{equation}
-For positions $x$ off the scattering plane, 
+We are interested in locations $x$ in the farfield of the scattering plane, for which $x_3 >> 1$.
+We therefore separate it from the other variables with the coordinate change
+\begin{equation}
+	y_i = \frac{x_i-x_i'}{x_3}, \, i=1,2.
+\end{equation}
+The transformed integral is
+\begin{equation}
+	\int_\Omega \frac{ e^{-i\left(x_3\left(k\sqrt{ y_1^2 + y_2^2 + 1 }-\mathbf{b}_J\cdot y\right) + \mathbf{b}_J\cdot x + c_J \right)} }{4\pi \sqrt{ y_1^2 + y_2^2 + 1 }}
+	\left( i\omega\mu_0 \mathbf{A}_J
+	- \frac{(\mathbf{A}_J\cdot\mathbf{b}_J)}{\omega\epsilon_0}
+	\left( ik + \frac{1}{ x_3\sqrt{ y_1^2 + y_2^2 + 1 } } \right)
+	\frac{<y_1,y_2,1>}{\sqrt{ y_1^2 + y_2^2 + 1 }} \right) \,x_3 dy.
+\end{equation}
+For large $x_3$, the leading term is highly oscillatory
+and so we expect the main contribution to the integral to come from the critical point(s) of the phase function.
+These are where
+\begin{equation}
+	\frac{ky}{\sqrt{ y_1^2 + y_2^2 + 1 }} = \mathbf{b}_J.
+\end{equation}
+This tells us that the critical point is given by
+\begin{equation}
+	y^* = \frac{1}{\sqrt{ k^2 - \norm{\mathbf{b}_J}^2 }}\mathbf{b}_J.
+\end{equation}
 
+\begin{remark}
+It is worth noting that this condition is equivalent to
+\begin{equation}
+	k(\hat{R} - (\hat{n}\cdot\hat{R})\hat{n}) = \mathbf{b}_E - (\hat{n}\cdot\mathbf{b}_E)\hat{n},
+\end{equation}
+and assuming $\norm{\mathbf{b}_E}=k$ yields
+\begin{equation}
+	\hat{R} = \frac{1}{k}\left( \mathbf{b}_E - 2(\mathbf{b}_E\cdot\hat{n})\hat{n} \right) \text{ or } \frac{1}{k}\mathbf{b}_E,
+\end{equation}
+which is the classic reflection condition.
+\end{remark}
 
 % fix x (test/sink) position
 % coordinate change of primed variables
@@ -137,41 +173,38 @@ For positions $x$ off the scattering plane,
 
 
 
-\begin{equation}
-	R = \sqrt{ \left(x_1-x_1'\right)^2 + \left(x_2-x_2'\right)^2 + x_3^2 }
-	= x_3\sqrt{ \frac{\left(x_1-x_1'\right)^2}{x_3} + \frac{\left(x_2-x_2'\right)^2}{x_3} + 1 }
-	= x_3\sqrt{ y_1^2 + y_2^2 + 1 }
-\end{equation}
+%\begin{equation}
+%	R = \sqrt{ \left(x_1-x_1'\right)^2 + \left(x_2-x_2'\right)^2 + x_3^2 }
+%	= x_3\sqrt{ \frac{\left(x_1-x_1'\right)^2}{x_3} + \frac{\left(x_2-x_2'\right)^2}{x_3} + 1 }
+%	= x_3\sqrt{ y_1^2 + y_2^2 + 1 }
+%\end{equation}
 
-\begin{equation}
-	y_i = \frac{x_i-x_i'}{x_3}
-\end{equation}
+%\begin{equation}
+%	y_i = \frac{x_i-x_i'}{x_3}
+%\end{equation}
 
-\begin{equation}
-	x' = x - x_3y
-\end{equation}
+%\begin{equation}
+%	x' = x - x_3y
+%\end{equation}
 
-\begin{equation}
-	e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}
-	= e^{-i\left(x_3\left(k\sqrt{ y_1^2 + y_2^2 + 1 }-\mathbf{b}_J\cdot y\right) + \mathbf{b}_J\cdot x + c_J \right)}
-\end{equation}
+%\begin{equation}
+%	e^{-i(kR+\mathbf{b}_J\cdot x' + c_J)}
+%	= e^{-i\left(x_3\left(k\sqrt{ y_1^2 + y_2^2 + 1 }-\mathbf{b}_J\cdot y\right) + \mathbf{b}_J\cdot x + c_J \right)}
+%\end{equation}
 
-\begin{equation}
-	\frac{ky}{\sqrt{ y_1^2 + y_2^2 + 1 }} = \mathbf{b}_J
-\end{equation}
+%\begin{equation}
+%	\frac{ky}{\sqrt{ y_1^2 + y_2^2 + 1 }} = \mathbf{b}_J
+%\end{equation}
 
-\begin{equation}
-	k(\hat{R} - (\hat{n}\cdot\hat{R})\hat{n}) = \mathbf{b}_E - (\hat{n}\cdot\mathbf{b}_E)\hat{n}
-\end{equation}
-\begin{equation}
-	k\hat{R} - \mathbf{b}_E = \hat{n}\cdot\left( k\hat{R} - \mathbf{b}_E \right)\hat{n}
-\end{equation}
-\begin{equation}
-	\hat{R} 
-\end{equation}
+%\begin{equation}
+%	k(\hat{R} - (\hat{n}\cdot\hat{R})\hat{n}) = \mathbf{b}_E - (\hat{n}\cdot\mathbf{b}_E)\hat{n}
+%\end{equation}
+%\begin{equation}
+%	k\hat{R} - \mathbf{b}_E = \hat{n}\cdot\left( k\hat{R} - \mathbf{b}_E \right)\hat{n}
+%\end{equation}
 
 
-%pretty sure integral comes out to be -i / \sqrt{k^2-b^2}
+%%pretty sure integral comes out to be -i / \sqrt{k^2-b^2}
 
 
 \end{document}
