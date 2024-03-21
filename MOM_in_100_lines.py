@@ -26,21 +26,15 @@ bases[nFacets:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 w = 3e9
 k = w / speed_of_light
 
-class PlaneWaveScenario:
-	def __init__(self, propDir, polVec, obs=None):
+class PlaneWave:
+	def __init__(self, propDir, polVec):
 		self.prop = propDir.copy()
-		self.polV = polVec.copy()
-		
-		if obs is None:
-			self.observations = [-self.prop]
-		else:
-			self.observations = obs.copy()
+		self.polV = prolVec.copy()
 	
 	def excitation(self, xyz ):
-		return self.polV * np.exp( 1j * k * xyz @ self.prop )
+		return self.polV * np.exp( -1j * k * self.prop.dot( xyz ) )
 
-scenarios = [PlaneWaveScenario( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
-scenarios.extend([ PlaneWaveScenario( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
+scenarios = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
 
 
 # Fill Matrix and RHSs

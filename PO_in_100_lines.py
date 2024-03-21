@@ -25,21 +25,15 @@ c = 3e8
 w = 3e9
 k = w / c
 
-class PlaneWaveScenario:
-	def __init__(self, propDir, polVec, obs=None):
+class PlaneWave:
+	def __init__(self, propDir, polVec):
 		self.prop = propDir.copy()
 		self.polV = prolVec.copy()
-		
-		if obs is None:
-			self.observations = [-self.prop]
-		else:
-			self.observations = obs.copy()
 	
 	def excitation(self, xyz ):
-		return self.polV * np.exp( 1j * k * self.prop.dot( xyz ) )
+		return self.polV * np.exp( -1j * k * self.prop.dot( xyz ) )
 
-scenarios = [PlaneWaveScenario( np.array([1,0,0]), np.array([0,0,1]), [ np.array([np.cos(th),np.sin(th),0]) for th in np.linspace(0,np.pi,40) ] )]
-scenarios.extend([ PlaneWaveScenario( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ])
+scenarios = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
 
 
 # TODO get initial rays
@@ -49,6 +43,11 @@ rayParentIDs = ...
 rayIDs = ...
 rayOrigins = ...
 rayDirs = ...
+
+def getCollisionHandlers( rays ):
+	handlerInds = np.zeros( len(rays), dtype=np.int64 )
+	return handlerInds
+	
 
 while nRays > 0 :
 	# trace rays in queue to get collisions
