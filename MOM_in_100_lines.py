@@ -13,16 +13,11 @@ from MeshUtils import loadVTK
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-vertices, facets = loadVTK( meshFileName )
+vertices, facets, _, _, v1, v2 = loadVTK( meshFileName )
 nFacets = len(facets)
 
-# Construct vector basis functions
-bases = np.zeros((2*nFacets,3))
-bases[:nFacets] = vertices[facets[:,1],:] - vertices[facets[:,0],:]
-bases[nFacets:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 
-
-# Set up Scenario(s)
+# Set up Excitations
 w = 3e9
 k = w / speed_of_light
 

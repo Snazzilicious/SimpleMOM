@@ -7,20 +7,15 @@ from MeshUtils import loadVTK
 # Plane, Wedge, No collisions
 # 	power?
 # currents
-# initial rays
+# initial rays - do "conformal"?
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-vertices, facets = loadVTK( meshFileName )
-
-# Compute Normals
-facetNormals = np.cross( vertices[facets[:,1],:] - vertices[facets[:,0],:], vertices[facets[:,2],:] - vertices[facets[:,0],:] )
-facetAreas = np.linalg.norm(facetNormals,axis=1)
-for vec,norm in zip(facetNormals,facetAreas):
-	vec /= norm
+vertices, facets, _, normals, _, _ = loadVTK( meshFileName )
+nFacets = len(facets)
 
 
-# Set up Scenario(s)
+# Set up Excitations
 c = 3e8
 w = 3e9
 k = w / c
