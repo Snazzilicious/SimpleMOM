@@ -38,6 +38,48 @@ simple_gradygradxG = [ [ sp.simplify( exp.subs( R, r ) ) for exp in rowG ] for r
 a,b,r = sp.symbols("a b r",real=True)
 sp.integrate( sp.cos(r)*sp.sin(r), (r,0,2*sp.pi) )
 sp.integrate( sp.exp(-sp.I*a*r)*sp.besselj(0,b*r) , (r,0,sp.oo) )
-# -I*b / sqrt( a**2 - b**2 ), a**2 > b**2 // -b/sqrt(a**2 - b**2), o/w
+# -I*b / sqrt( a**2 - b**2 ), a**2 > b**2 // -b/sqrt(a**2 - b**2), o/w XXX Why is this wrong???
 sp.hankel_transform( sp.exp(-sp.I*a*r)/r, r,b,0)
 # exp_polar(3*I*pi/2)/(b*sqrt(a**2/b**2 - 1)), a**2/b**2 > 1
+sp.hankel_transform( sp.exp(-sp.I*k*r)/r, r,b,1)
+# 1/b - 1/(b*sqrt(-b**2/k**2 + 1))
+sp.hankel_transform( sp.exp(-sp.I*k*r)/r**2, r,b,1)
+# I*sqrt(-1 + k**2/b**2) - I*k/b
+
+
+
+# Stationary phase
+bJ1,bJ2 = sp.symbols("bJ1 bJ2",real=True)
+S = k*sp.sqrt( y1**2 + y2**2 + 1 ) - bJ1*y1 - bJ2*y2
+gradS = [sp.simplify(sp.diff(S,var)) for var in [y1,y2]]
+hess = [[sp.simplify(sp.diff(dS,var)) for var in [y1,y2]] for dS in gradS]
+aStar = sp.solve(gradS[0].subs( [(y1,a*bJ1),(y2,a*bJ2)] ), a )[1]
+
+sp.simplify(sp.sqrt(sp.det(sp.Matrix(hess)).subs( [(y1,aStar*bJ1),(y2,aStar*bJ2)] )))
+
+sp.simplify(sp.sqrt(1+y1**2+y2**2).subs([(y1,aStar*bJ1),(y2,aStar*bJ2)]))
+sp.simplify( aStar*bJ1**2 + aStar*bJ2**2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

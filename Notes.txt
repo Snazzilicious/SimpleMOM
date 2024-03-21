@@ -18,3 +18,8 @@ embree
 
 Check form of second term in EFIE integral, the sign in particular
 
+TODO PO:
+getCollision handler ID
+Planar currents
+Far field radiation
+Rays emitted by planar

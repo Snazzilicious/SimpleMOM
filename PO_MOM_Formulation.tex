@@ -76,7 +76,7 @@ We now have the integral
 \begin{multline}
 	=i\omega\mu_0 \mathbf{A}_J\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
 	\int_0^\infty e^{-ikr} \int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} \,d\theta dr \\
-	+ \frac{k}{\omega\epsilon_0}(\mathbf{A}_J\cdot\mathbf{b}_J)\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
+	+ \frac{(\mathbf{A}_J\cdot\mathbf{b}_J)}{\omega\epsilon_0}\frac{e^{-i(\mathbf{b}_J\cdot x + c_J)}}{4\pi}
 	\int_0^\infty e^{-ikr}\left( ik + \frac{1}{r} \right) \int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} <\cos{\theta},\sin{\theta}> \,d\theta dr.
 \end{multline}
 An important identity for computing this is
@@ -92,7 +92,7 @@ We thus get
 \end{equation}
 and
 \begin{equation}
-	\int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} <\cos{\theta},\sin{\theta}> \,d\theta = <0,0>.
+	\int_0^{2\pi} e^{-i\norm{\mathbf{b}_J}r\cos{\theta}} <\cos{\theta},\sin{\theta}> \,d\theta = -2i\pi J_1(\norm{\mathbf{b}_J}r)<1,0>.
 \end{equation}
 The integral is now
 \begin{equation}
