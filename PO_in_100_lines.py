@@ -11,8 +11,15 @@ from MeshUtils import loadVTK
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-vertices, facets, _, normals, _, _ = loadVTK( meshFileName )
+vertices, facets = loadVTK( meshFileName )
 nFacets = len(facets)
+# Facet local vector basis
+v1 = vertices[facets[:,1],:] - vertices[facets[:,0],:]
+v2 = vertices[facets[:,2],:] - vertices[facets[:,0],:]
+normals = np.cross( v1,v2 )
+areas = np.linalg.norm(normals,axis=1) / 2.0
+for i in range(nFacets):
+	normals[i] /= 2*areas[i]
 
 
 # Set up Excitations

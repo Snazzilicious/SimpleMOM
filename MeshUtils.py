@@ -35,19 +35,4 @@ def loadVTK( meshFileName ):
 
 	f.close()
 	
-	# Facet local vector basis
-	v1 = vertices[facets[:,1],:] - vertices[facets[:,0],:]
-	v2 = vertices[facets[:,2],:] - vertices[facets[:,0],:]
-	normals = np.cross( v1, v2 )
-	
-	v1_nrms = np.linalg.norm(v1,axis=1)
-	areas = np.linalg.norm(normals,axis=1)
-	
-	for i in range(nFacets):
-		normals[i] /= areas[i]
-		v1[i] /= v1_nrms[i]
-		
-		v2[i] -= v2[i] @ v1[i]
-		v2[i] /= np.linalg.norm(v2[i])
-	
 	return vertices, facets, areas, normals, v1, v2

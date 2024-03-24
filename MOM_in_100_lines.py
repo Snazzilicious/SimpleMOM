@@ -13,8 +13,12 @@ from MeshUtils import loadVTK
 
 # Load mesh
 meshFileName = "SphereMesh.vtk"
-vertices, facets, _, _, v1, v2 = loadVTK( meshFileName )
+vertices, facets = loadVTK( meshFileName )
 nFacets = len(facets)
+# Facet local vector basis
+bases = np.zeros((2*nFacets,3))
+bases[:nFacets,:] = vertices[facets[:,1],:] - vertices[facets[:,0],:]
+bases[nFacets:,:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 
 
 # Set up Excitations
