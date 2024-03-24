@@ -35,45 +35,56 @@ class PlaneWave:
 
 excitations = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
 
+# Integration over triangles
+# triangle defined by v1 and v2 originating at p0
+def integrateOverTri( f, tri_i ):
+	p0 = vertices[facets[tri_i,0]]
+	v1 = bases[tri_i]
+	v2 = bases[tri_i+nFacets]
+	return dblquad( lambda h1,h2: f( p0 + h1*v1 + h2*v2 ), 0,1, lambda h1: 0, lambda h1: 1-h1 ) * np.linalg.norm( np.cross(v1,v2) )
+
+def integrateOver2Tris( f, tri_i, tri_j ):
+	return integrateOverTri( lambda x: integrateOverTri( lambda y: f( x,y ), tri_j ), tri_i )
+
+# integrands involving the Green's function
+def integrand_G_far( x, rHat, basis_j ):
+	return 1j * w * mu_0 * np.exp( -1j * k * x @ rHat ) * ( bases[basis_j] - (bases[basis_j] @ rHat)*rHat )
+
+def integrand_G_near( x,y, test_i,basis_j ):
+	dx = x-y
+	R = np.linalg.norm( dx )
+	I = (bases[test_i] @ bases[basis_j])
+	return 1j * w * mu_0 * I * np.exp( -1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
+
+def integrand_dxG( x,y, normal, test_i,basis_j ):
+	dx = x-y
+	R = np.linalg.norm( dx )
+	I = -( bases[test_i] @ dx ) * ( bases[basis_j] @ normal ) * ( 1j * k * R + 1 )
+	return ( I / (1j * w * epsilon_0) ) * ( np.exp( -1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 ) )
+	
+def integrand_dydxG( x,y, test_i,basis_j ):
+	dx = x-y
+	R = np.linalg.norm( dx )
+	I = bases[test_i] @ ( np.outer(dx,dx) * (R**2*k**2 - 3j*R*k - 3) + (R**2 + 1j*R**3*k)*np.eye(3) ) @ bases[basis_j]
+	return ( I / (1j * w * epsilon_0) ) * ( np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 ) )
 
 # Fill Matrix and RHSs
-# helper functions
-def G( R ):
-	return np.exp( -1j * k * R ) / ( 4 * np.pi * R + 1e-15 )
-
-def gradxG( x,y ):
-	dx = x-y
-	R = np.linalg.norm( dx, axis=1 ).reshape(( x.shape[0], 1, y.shape[-1] ))
-	return -dx * ( 1j * k * R + 1 ) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**3 + 1e-15 )
-
-def gradygradxG_1( R ):
-	return (R**2*k**2 - 3*I*R*k - 3) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
-def gradygradxG_2( R ):
-	return (R**2 + 1j*R**3*k) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-15 )
-
-# Galerkin integrals of basis functions and Green's functions
-dx = (pts.reshape((-1,3,1))-pts.reshape((-1,3,1)).T).reshape(pts.shape+(3,)+pts.shape[::-1]).transpose([0,1,4,3,2])
-R = np.linalg.norm( dx, axis=-1 )
-I_G = np.einsum('ijkl,ik,jl->ij', G(R), wts,wts )
-
-I_gG = ... # TODO
-
-I_ggG = np.einsum('ijklm,ijkln,ijkl,ik,jl->ijmn', dx,dx, gradygradxG_1(R), wts,wts )
-I_ggG += np.einsum('ijklm,ijkln,ijkl,mn,ik,jl->ijmn', dx,dx, gradygradxG_2(R), np.eye(3), wts,wts )
-I_ggG /= 1j * w * epsilon_0
-for i in range(nFacets): # diagonal values invalid
-	I_ggG[i,i,:,:] = 0.0
-
-# Matrix assembly
-A = 1j * w * mu_0 * bases @ bases.T
-b = np.zeros((2*nFacets,len(scenarios)),dtype=np.complex128)
-for i in range(2):
-	for j in range(2):
-		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] *= I_G
-		A[i*nFacets:(i+1)*nFacets,j*nFacets:(j+1)*nFacets] += np.einsum('ijkl,ik,jl->ij' I_ggG, bases[i*nFacets:(i+1)*nFacets], bases[j*nFacets:(j+1)*nFacets])
-
-	for j in range(len(scenarios)):
-		b[i*nFacets:(i+1)*nFacets,j] = np.einsum( 'ijk,ij,ik->i', scenarios[j].excitation(pts), wts, bases[i*nFacets:(i+1)*nFacets] )
+A = np.zeros( (2*nFacets,2*nFacets), dtype=np.comlpex128 )
+b = np.zeros( 2*nFacets, dtype=np.comlpex128 )
+for i in range(2*nFacets):
+	for j in range(2*nFacets):
+		face_i = i % nFacets
+		face_j = j % nFacets
+		
+		A[i,j] = integrateOver2Tris( lambda x,y: integrand_G_near( x,y, i,j ), face_i, face_j )
+		
+		if i == j :
+			A[i,j] += integrate1D( integrand_dxG(x,y, i,j), pts[face_i], bnd_pts[face_j] ) # TODO
+		else:
+			A[i,j] += integrateOver2Tris( lambda x,y: integrand_dydxG( x,y, i,j ), face_i, face_j )
+	
+	for j,ex in enumerate(excitations):
+		b[i,j] = -integrateOverTri( lambda x: ex.excitation( x ) @ bases[i], face_i )
 
 
 # Factor and solve
@@ -81,7 +92,10 @@ sols = np.linalg.solve( A,b )
 
 
 # post process
-mags = [[np.linalg.norm( np.exp( 1j * k * srcPts.dot( obs ) ) @ sols[:,3*j:3*(j+1)] ) for obs in scene.observations] for j,scene in enumerate(scenarios)]
+for basis_j in range(2*nFacets):
+	face_j = basis_j % nFacets
+	farfield[obs] += integrateOverTri( lambda x: integrand_G_far(x,obs_dir,basis_j), face_j ) * sol[basis_j,exc[obs]]
+
 
 # Plot results
 #ax = plt.figure().add_subplot(projection='3d')
