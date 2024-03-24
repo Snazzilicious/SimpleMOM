@@ -28,7 +28,7 @@ class PlaneWave:
 	def excitation(self, xyz ):
 		return self.polV * np.exp( -1j * k * self.prop.dot( xyz ) )
 
-scenarios = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
+excitations = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
 
 
 # TODO get initial rays
