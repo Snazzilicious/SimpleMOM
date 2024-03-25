@@ -35,4 +35,4 @@ def loadVTK( meshFileName ):
 
 	f.close()
 	
-	return vertices, facets, areas, normals, v1, v2
+	return vertices, facets
