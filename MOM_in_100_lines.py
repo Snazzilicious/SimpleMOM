@@ -7,7 +7,6 @@ from MeshUtils import loadVTK
 # TODO
 # verify derivates numerically
 # spot check matrix elements (and rhs)
-# farfield
 # find reference cases
 
 # Load mesh
@@ -21,7 +20,7 @@ bases[nFacets:,:] = vertices[facets[:,2],:] - vertices[facets[:,0],:]
 areas = 0.5 * np.linalg.norm( np.cross( bases[:nFacets], bases[nFacets:] ), axis=1 )
 
 # Set up Excitations
-w = 3e9
+w = 1e9
 k = w / speed_of_light
 
 class PlaneWave:
@@ -35,7 +34,7 @@ class PlaneWave:
 excitations = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
 
 
-# Fill Imnpedance Matrix
+# Fill Impedance Matrix
 tst_pts = (2.0*vertices[facets[:,0],:] + vertices[facets[:,1],:] + vertices[facets[:,2],:])/4.0
 src_pts = (vertices[facets[:,0],:] + vertices[facets[:,1],:] + 2.0*vertices[facets[:,2],:])/4.0
 
@@ -66,7 +65,7 @@ A[nFacets:,nFacets:] = ( bTb[nFacets:,nFacets:] * ( A_G + A_ddG_2*A_ddG_3 ) + bT
 b = np.zeros( (2*nFacets,len(excitations)), dtype=np.complex128 )
 for j,exc in enumerate(excitations):
 	E_inc = exc.excitation( tst_pts )
-	b[:,j] = -np.sum( bases * np.row_stack((E_inc,E_inc)), axis=1 )
+	b[:,j] = -np.sum( bases * np.row_stack((E_inc,E_inc)), axis=1 ) * np.concatenate((areas,areas))
 
 
 # Factor and solve
@@ -74,11 +73,21 @@ sols = np.linalg.solve( A,b )
 
 
 # post process
-for j,obs_dir in enumerate(observations):
-	phase = np.exp( -1j * k * src_pts @ obs_dir ) * areas
-	farfield[j] = 1j * w * mu_0 * ( ( np.concatenate((phase,phase)) * sols[:,j] ) @ ( bases - np.outer( bases @ obs_dir, obs_dir ) ) ) # Farfield Green's function
+class Observation:
+	def __init__(self, excitation_index, dir_to_observer ):
+		self.exc_ind = excitation_index
+		self.obs_dir = dir_to_observer
+		self.polV = None
+
+observations = [Observation(0, -np.array([np.cos(th),np.sin(th),0]) ) for th in np.linspace(0,2*np.pi,100)]
+
+for obs in observations:
+	phase = np.exp( 1j * k * src_pts @ obs.obs_dir ) * areas # Farfield Green's function
+	obs.polV = 1j * w * mu_0 * ( ( np.concatenate((phase,phase)) * sols[:,obs.exc_ind] ) @ ( bases - np.outer( bases @ obs.obs_dir, obs.obs_dir ) ) )
+
+mags = [np.linalg.norm(o.polV) for o in observations]
+plt.plot( (180/np.pi)*np.linspace(0,2*np.pi,100), 10*np.log10(mags) )
 
 
-plt.plot(np.linspace(0,2*np.pi,40),mags[0])
-plt.show()
+
 
