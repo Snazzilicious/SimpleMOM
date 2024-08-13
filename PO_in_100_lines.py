@@ -20,7 +20,7 @@ normals = np.cross( v1,v2 )
 areas = np.linalg.norm(normals,axis=1) / 2.0
 for i in range(nFacets):
 	normals[i] /= 2*areas[i]
-
+mesh = trimesh.Trimesh(vertices=vertices, faces=facets)
 
 # Set up Excitations
 c = 3e8
