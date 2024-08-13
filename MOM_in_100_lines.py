@@ -2,13 +2,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import mu_0,epsilon_0,speed_of_light
-from scipy.integrate import quad_vec
-from numba import njit
 from MeshUtils import loadVTK
 
 # TODO
 # verify derivates numerically
-# compute pts and wts
 # spot check matrix elements (and rhs)
 # farfield
 # find reference cases
@@ -36,14 +33,9 @@ class PlaneWave:
 		return np.outer( np.exp( -1j * k * xyz.dot( self.prop ) ), self.polV )
 
 excitations = [ PlaneWave( np.array([np.cos(th),np.sin(th),0]), np.array([0,0,1]) ) for th in np.linspace(0,np.pi,5) ]
-'''
-def integrand_dydxG( x,y, test_i,basis_j ):
-	dx = x-y
-	R = np.linalg.norm( dx )
-	I = bases[test_i] @ ( np.outer(dx,dx) * (R**2*k**2 - 3j*R*k - 3) + (R**2 + 1j*R**3*k)*np.eye(3) ) @ bases[basis_j]
-	return ( I / (1j * w * epsilon_0) ) * ( np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 + 1e-9 ) )
-'''
-# Fill Imnpedance Matrix
+
+
+# Fill Impedance Matrix
 tst_pts = (2.0*vertices[facets[:,0],:] + vertices[facets[:,1],:] + vertices[facets[:,2],:])/4.0
 src_pts = (vertices[facets[:,0],:] + vertices[facets[:,1],:] + 2.0*vertices[facets[:,2],:])/4.0
 
@@ -57,10 +49,10 @@ A_ddG_2 = R**2 + 1j*R**3*k
 A_ddG_3 = ( 1 / (1j * w * epsilon_0) ) * np.exp( -1j * k * R ) / ( 4 * np.pi * R**5 )
 
 bTb = bases @ bases.T
-bT_RRT_b_11 = np.einsum("ijk,ij->ik", dx, bases[:nFacets] ) * np.einsum("ijk,kj->ik", dx, bases[:nFacets] )
-bT_RRT_b_12 = np.einsum("ijk,ij->ik", dx, bases[:nFacets] ) * np.einsum("ijk,kj->ik", dx, bases[nFacets:] )
-bT_RRT_b_21 = np.einsum("ijk,ij->ik", dx, bases[nFacets:] ) * np.einsum("ijk,kj->ik", dx, bases[:nFacets] )
-bT_RRT_b_22 = np.einsum("ijk,ij->ik", dx, bases[nFacets:] ) * np.einsum("ijk,kj->ik", dx, bases[nFacets:] )
+bT_RRT_b_11 = np.einsum( "ijk,ij->ik", dx, bases[:nFacets] ) * np.einsum( "ijk,kj->ik", dx, bases[:nFacets] )
+bT_RRT_b_12 = np.einsum( "ijk,ij->ik", dx, bases[:nFacets] ) * np.einsum( "ijk,kj->ik", dx, bases[nFacets:] )
+bT_RRT_b_21 = np.einsum( "ijk,ij->ik", dx, bases[nFacets:] ) * np.einsum( "ijk,kj->ik", dx, bases[:nFacets] )
+bT_RRT_b_22 = np.einsum( "ijk,ij->ik", dx, bases[nFacets:] ) * np.einsum( "ijk,kj->ik", dx, bases[nFacets:] )
 
 weight = np.outer( areas, areas )
 
@@ -82,15 +74,10 @@ sols = np.linalg.solve( A,b )
 
 
 # post process
-for j,obs_dir in enumerate(observations):
+for obs_dir,ex_ind in observations:
 	phase = np.exp( -1j * k * src_pts @ obs_dir ) * areas
-	farfield[j] = 1j * w * mu_0 * ( ( np.concatenate((phase,phase)) * sols[:,j] ) @ ( bases - np.outer( bases @ obs_dir, obs_dir ) ) ) # Farfield Green's function
+	obs.farfield = 1j * w * mu_0 * ( ( np.concatenate((phase,phase)) * sols[:,j] ) @ ( bases - np.outer( bases @ obs_dir, obs_dir ) ) ) # Farfield Green's function
 
-
-# Plot results
-#ax = plt.figure().add_subplot(projection='3d')
-#ax.quiver( testPts[:,0],testPts[:,1],testPts[:,2], np.real(b[:,0]),np.real(b[:,1]),np.real(b[:,2]), length=0.1, normalize=True)
-#plt.show()
 
 plt.plot(np.linspace(0,2*np.pi,40),mags[0])
 plt.show()
