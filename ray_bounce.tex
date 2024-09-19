@@ -1,0 +1,137 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
+\newcommand{\Div}[0]{\nabla\cdot}
+\newcommand{\Curl}[0]{\nabla\times}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{plain}
+\newtheorem*{remark}{Remark}
+
+\title{Scattered field from plane wave on infinite flat plate}
+\author{Ian Holloway}
+\date{September 2024}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{sec_intro}
+
+The scattered magnetic field is
+\begin{equation}
+	\mathbf{H}(x) = \int \mathbf{J}(x') \times \nabla_{x'} G(x,x') dS'
+\end{equation}
+\begin{equation}
+	\mathbf{H}(x)
+	= \int \mathbf{J}(x') \times \nabla_{x'} \frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}} dS'
+\end{equation}
+\begin{equation}
+	\mathbf{H}(x)
+	= -\int \mathbf{J}(x') \times \hat{R} \left( ik + \frac{1}{R} \right) \frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}} dS'
+\end{equation}
+\begin{equation}
+	\mathbf{H}(x)
+	= -\int \mathbf{J}(x') \times \frac{x-x'}{\norm{x-x'}}
+	\left( ik + \frac{1}{\norm{x-x'}} \right)
+	\frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}} dS'
+\end{equation}
+\begin{equation}
+	\mathbf{H}(x)
+	= -\int_{\mathbb{R}^2} \mathbf{J}(x') \times \frac{x-x'}{\norm{x-x'}}
+	\left( ik + \frac{1}{\norm{x-x'}} \right)
+	\frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}} dx_1'dx_2'
+\end{equation}
+Let the current be a plane wave.
+\begin{equation}
+	\mathbf{J}(x') = \mathbf{J}e^{-ik(ax_1' + bx_2')}, \quad a^2 + b^2 \leq 1
+\end{equation}
+Now,
+\begin{equation}
+	\mathbf{H}(x)
+	= -\mathbf{J} \times \int_{\mathbb{R}^2}
+	\frac{x-x'}{\norm{x-x'}}
+	\left( ik + \frac{1}{\norm{x-x'}} \right)
+	\frac{1}{4\pi\norm{x-x'}}
+	e^{-ik\left( \norm{x-x'} + ax_1' + bx_2' \right)} dx_1'dx_2'
+\end{equation}
+Define the phase function
+\begin{equation}
+	f(x') = -\norm{x-x'} - ax_1' - bx_2'
+\end{equation}
+Then
+\begin{equation}
+	\nabla_{x'} f(x') =
+	\begin{bmatrix}
+		\frac{x_1 - x_1'}{\norm{x-x'}} - a \\
+		\frac{x_2 - x_2'}{\norm{x-x'}} - b
+	\end{bmatrix}
+\end{equation}
+\begin{equation} % TODO
+	\nabla^2_{x'} f(x') =
+	\begin{bmatrix}
+		\frac{x_1 - x_1'}{\norm{x-x'}} - a & ... \\
+		\frac{x_2 - x_2'}{\norm{x-x'}} - b & ...
+	\end{bmatrix}
+\end{equation}
+
+The stationary phase approximation in two dimensions is
+\begin{equation}
+	\int g(x) e^{ikf(x^*)}
+	\approx \frac{2\pi}{k} g(x^*)
+	\abs{\det \nabla^2 f(x^*)}^{-1/2}
+	e^{ikf(x^*) + \frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
+for
+\begin{equation}
+	\nabla f(x^*) = 0
+\end{equation}
+
+
+To find the stationary point of the radiation intergral, first WLOG let $x=(0,0,h)$.
+Thus the gradient of the phase function is
+\begin{equation}
+	\nabla^2_{x'} f(x') = 
+	\begin{bmatrix}
+		\frac{-x_1'}{\sqrt{x_1^{'2} + x_2^{'2} + h^2}} - a \\
+		\frac{-x_2'}{\sqrt{x_1^{'2} + x_2^{'2} + h^2}} - b
+	\end{bmatrix}
+\end{equation} % note <x_1',x_2'> = c * <a,b>, then solve for c
+from which we compute
+\begin{equation}
+	x^{'*} = \left( \frac{-ha}{\sqrt{ 1 - a^2 - b^2 }}, \frac{-hb}{\sqrt{ 1 - a^2 - b^2 }}, 0 \right)
+\end{equation}
+which is consistent with Snell's law
+\begin{equation}
+	\hat{R} - \left( \hat{n}\cdot\hat{R} \right)\hat{n} = 
+	-\begin{bmatrix}
+		a \\
+		b \\
+		0
+	\end{bmatrix}
+\end{equation}
+
+To approximate the scattered magnetic field, we first get
+\begin{equation}
+	x'^* = 
+\end{equation}
+\begin{equation}
+	\mathbf{H}(x)
+	= ...
+\end{equation}
+
+
+\end{document}
