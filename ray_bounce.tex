@@ -56,9 +56,18 @@ Assume that the surface is flat and is WLOG aligned with the $x_1x_2$ plane.
 	\left( ik + \frac{1}{\norm{x-x'}} \right)
 	\frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}} dx_1'dx_2'
 \end{equation}
-Let the current be a plane wave.
+Let the incident field be a plane wave
 \begin{equation}
-	\mathbf{J}(x') = \mathbf{J}e^{-ik(ax_1' + bx_2')}, \quad a^2 + b^2 \leq 1
+	\mathbf{H}_i = \mathbf{H}e^{-ik \hat{p} \cdot x},
+\end{equation}
+which induces a plane wave current
+\begin{equation}
+	\mathbf{J}(x') = \mathbf{J}e^{-ik(ax_1' + bx_2')}
+\end{equation}
+with
+\begin{equation}
+	\mathbf{J} = 2\hat{n}\times\mathbf{H},
+	\quad \begin{bmatrix} a & b & 0 \end{bmatrix} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}.
 \end{equation}
 Now,
 \begin{equation}
@@ -80,10 +89,8 @@ The stationary phase approximation in two dimensions is
 \end{equation}
 for
 \begin{equation}
-	\nabla f(x^*) = 0
+	\nabla f(x^*) = 0.
 \end{equation}
-
-
 To apply this approximation to the radiation intergral,
 we set
 \begin{equation}
@@ -94,90 +101,95 @@ we set
 \end{equation}
 and
 \begin{equation}
-	f(x') = -\norm{x-x'} - ax_1' - bx_2'
+	f(x') = -\norm{x-x'} - ax_1' - bx_2'.
 \end{equation}
-with
+
+To find the stationary point of the radiation intergral, first WLOG let $x=(0,0,h)$,
+so the gradient of the phase function is
 \begin{equation}
-	\nabla_{x'} f(x') =
+	\nabla_{x'} f(x') = 
 	\begin{bmatrix}
 		\frac{x_1 - x_1'}{\norm{x-x'}} - a \\
 		\frac{x_2 - x_2'}{\norm{x-x'}} - b
 	\end{bmatrix}
-\end{equation}
-\begin{equation} % TODO
-	\nabla^2_{x'} f(x') =
-	\begin{bmatrix}
-		\frac{x_1 - x_1'}{\norm{x-x'}} - a & ... \\
-		\frac{x_2 - x_2'}{\norm{x-x'}} - b & ...
-	\end{bmatrix}
-\end{equation}
-
-To find the stationary point of the radiation intergral, first WLOG let $x=(0,0,h)$,
-so the gradient is
-\begin{equation}
-	\nabla_{x'} f(x') = 
+	=
 	\begin{bmatrix}
 		\frac{-x_1'}{\sqrt{x_1^{'2} + x_2^{'2} + h^2}} - a \\
 		\frac{-x_2'}{\sqrt{x_1^{'2} + x_2^{'2} + h^2}} - b
 	\end{bmatrix}
 \end{equation} % note <x_1',x_2'> = c * <a,b>, then solve for c
-We then get
+We compute
 \begin{equation}
 	x^{'*} = \left( \frac{-ha}{\sqrt{ 1 - a^2 - b^2 }}, \frac{-hb}{\sqrt{ 1 - a^2 - b^2 }}, 0 \right)
+\end{equation}
+so
+\begin{equation}
+	R^* = \frac{h}{\sqrt{1-a^2-b^2}},
+	\quad \hat{R}^* - \left( \hat{n}\cdot\hat{R}^* \right)\hat{n} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}
+	\quad\Rightarrow\quad \hat{R}^* = \hat{p} - 2\left( \hat{n}\cdot\hat{p} \right)\hat{n},
+\end{equation}
+which is consistent with Snell's law.
+
+
+The Hessian of the phase function at the stationary point is
+\begin{equation}
+	\nabla^2_{x'} f(x^{'*}) =
+	\frac{1}{R}\left( \hat{R}\hat{R}^T - I \right) =
+	\frac{\sqrt{1-a^2-b^2}}{h}
+	\begin{bmatrix}
+		a^2-1 & ab \\
+		ab & b^2-1
+	\end{bmatrix}
+\end{equation}
+with determinant
+\begin{equation}
+	\det \nabla^2 f(x^{'*})
+	= \frac{1-a^2-b^2}{R^{*2}}
+	= \frac{\left(\hat{n}\cdot\hat{R}^*\right)^2}{R^{*2}}
+\end{equation}
+and eigenvalues
+\begin{equation}
+	\lambda\left( \nabla^2 f(x^{'*}) \right) = 
+	-1, -\left( 1-a^2-b^2 \right)
+	\quad\Rightarrow\quad \text{sign}\nabla^2 f(x^{'*}) = -2.
 \end{equation}
 
 
 The approximated radiation integral is
-\begin{equation} % TODO
+\begin{equation}
 	\mathbf{H}(x) \approx
 	-\frac{2\pi}{k}
 	\mathbf{J} \times \hat{R}^*
 	\left( ik + \frac{1}{R^*} \right)
 	\frac{1}{4\pi R^*}
-	\left( \frac{1}{R^{*2}} \right)^{-1/2}
+	\left( \frac{\left(\hat{n}\cdot\hat{R}^*\right)^2}{R^{*2}} \right)^{-1/2}
 	e^{-ikR^*}
 	e^{-ik(ax_1^{'*} + bx_2^{'*})}
-	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+	e^{\frac{-i\pi}{2}}
 \end{equation}
-
-\begin{equation} % TODO
-	=
-	-\frac{1}{2k}
-	\mathbf{J}(x^{'*}) \times \hat{R}^*
-	\left( ik + \frac{1}{R^*} \right)
-	e^{-ikR^*}
-	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
-\end{equation}
-
-\begin{equation} % TODO
-	=
-	-i\left( 1 + \frac{1}{ikR^*} \right)
-	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
-	e^{-ik\hat{R}^*\cdot x}
-	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
-\end{equation}
-
-\begin{equation} % TODO
-	\approx
-	-i
-	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
-	e^{-ik\hat{R}^*\cdot x}
-	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
-\end{equation}
-
-
-
-
-
-which is consistent with Snell's law
 \begin{equation}
-	\hat{R} - \left( \hat{n}\cdot\hat{R} \right)\hat{n} = 
-	\begin{bmatrix}
-		a \\
-		b \\
-		0
-	\end{bmatrix}
+	=
+	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}
+	\left( 1 + \frac{1}{ikR^*} \right)
+	\mathbf{J}(x^{'*}) \times \hat{R}^*
+	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
+\begin{equation}
+	\approx
+	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}
+	\mathbf{J}(x^{'*}) \times \hat{R}^*
+	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
+\end{equation}
+\begin{equation}
+	=
+	-\frac{1}{\left(\hat{n}\cdot\hat{R}^*\right)}
+	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
+	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
+\end{equation}
+Note that this is a plane wave.
+It travels in a single direction, $\hat{R}$, and
+there is no leading factor of $1/R$.
+
 
 
 

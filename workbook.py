@@ -65,12 +65,13 @@ sp.simplify( aStar*bJ1**2 + aStar*bJ2**2)
 import sympy as sp
 
 x1,x2,x3, y1,y2,y3, a,b,c, h = sp.symbols("x1 x2 x3 y1 y2 y3 a b c h", real=True)
+sp.Q.positive(h)
 
 f = - sp.sqrt( (x1-y1)**2 + (x2-y2)**2 + (x3-y3)**2 ) - a*y1 - b*y2
 
 grad = [sp.simplify(sp.diff(f,var)) for var in [y1,y2]]
 
-hess = [[sp.simplify(sp.diff(df,var)) for var in [y1,y2]] for df in grad]
+hess = [[sp.simplify(sp.diff(df,var)) for var in [y1,y2]] for df in grad] # = \frac{1}{R} ( \hat{R}\hat{R}^T - I )
 
 # solve for stationary point
 grad_2a = [df.subs( [(x1,0),(x2,0),(x3,h), (y3,0)] ) for df in grad]
@@ -82,7 +83,7 @@ y1_s = c_solution*a
 y2_s = c_solution*b
 
 
-# determinant of Hessian : comes out to be 1/R^2 => 1/\sqrt{det H} = R
+# determinant of Hessian : comes out to be (1 - a^2 - b^2)/R^2
 hess_2a = [[x.subs( [(x1,0),(x2,0),(x3,h), (y3,0)] ) for x in row] for row in hess]
 hess_2b = [[x.subs( [(y1,y1_s),(y2,y2_s)] ) for x in row] for row in hess_2a]
 hess_2c = sp.Matrix([[sp.simplify(x) for x in row] for row in hess_2b])
