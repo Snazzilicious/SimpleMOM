@@ -127,7 +127,43 @@ We then get
 \end{equation}
 
 
+The approximated radiation integral is
+\begin{equation} % TODO
+	\mathbf{H}(x) \approx
+	-\frac{2\pi}{k}
+	\mathbf{J} \times \hat{R}^*
+	\left( ik + \frac{1}{R^*} \right)
+	\frac{1}{4\pi R^*}
+	\left( \frac{1}{R^{*2}} \right)^{-1/2}
+	e^{-ikR^*}
+	e^{-ik(ax_1^{'*} + bx_2^{'*})}
+	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
 
+\begin{equation} % TODO
+	=
+	-\frac{1}{2k}
+	\mathbf{J}(x^{'*}) \times \hat{R}^*
+	\left( ik + \frac{1}{R^*} \right)
+	e^{-ikR^*}
+	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
+
+\begin{equation} % TODO
+	=
+	-i\left( 1 + \frac{1}{ikR^*} \right)
+	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
+	e^{-ik\hat{R}^*\cdot x}
+	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
+
+\begin{equation} % TODO
+	\approx
+	-i
+	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
+	e^{-ik\hat{R}^*\cdot x}
+	e^{\frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
 
 
 
