@@ -126,7 +126,7 @@ so
 \begin{equation}
 	R^* = \frac{h}{\sqrt{1-a^2-b^2}},
 	\quad \hat{R}^* - \left( \hat{n}\cdot\hat{R}^* \right)\hat{n} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}
-	\quad\Rightarrow\quad \hat{R}^* = \hat{p} - 2\left( \hat{n}\cdot\hat{p} \right)\hat{n},
+	\quad\Rightarrow\quad \hat{R}^* =  \hat{p}\text{, } \hat{p} - 2\left( \hat{n}\cdot\hat{p} \right)\hat{n},
 \end{equation}
 which is consistent with Snell's law.
 
@@ -189,6 +189,77 @@ The approximated radiation integral is
 Note that this is a plane wave.
 It travels in a single direction, $\hat{R}$, and
 there is no leading factor of $1/R$.
+
+When we set the scattered direction to the incident direction, $\hat{R}^*=\hat{p}$,
+and keep in mind that the amplitude of the incident wave is perpendicular to its propagation direction,
+the scattered amplitude is
+\begin{equation}
+	-\frac{1}{\left(\hat{n}\cdot\hat{p}\right)}
+	\left( \left(\hat{n}\cdot\hat{p}\right)\mathbf{H} - \left(\mathbf{H}\cdot\hat{p}\right)\hat{n} \right)
+	=-\mathbf{H},
+\end{equation}
+which perfectly cancels the incident wave.
+
+
+\section{Derivation of PO from MFIE}
+
+We start with the MFIE problem defined by
+\begin{equation}
+	2\hat{n}\times\mathbf{H}_i(x)
+	= \mathbf{J}(x)
+	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x'} G(x,x') dS'.
+\end{equation}
+We then break the domain of integration into pieces
+\begin{equation}
+	2\hat{n}\times\mathbf{H}_i(x)
+	= \mathbf{J}(x)
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x'} G(x,x') dS'.
+\end{equation}
+We assume flat subdomains, which are excited by plane waves of the form
+\begin{equation}
+	\mathbf{H}(x) = \mathbf{H}e^{-ik \hat{p} \cdot x}.
+\end{equation}
+The induced currents are therefore also plane waves of the form
+\begin{equation}
+	\mathbf{J}(x') = \mathbf{J}e^{-ik \hat{v} \cdot x'},
+	\quad \mathbf{J} = 2\hat{n}\times\mathbf{H},
+	\quad \hat{v} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}.
+\end{equation}
+The integral over the subdomain of one of these currents is
+\begin{equation}
+	\int_{\Omega_n}
+	\mathbf{J} \times \hat{R}
+	\left( ik + \frac{1}{R} \right)
+	\frac{e^{-ik\left(R + \hat{v} \cdot x'\right)}}{4\pi R} dS',
+	\quad R = \norm{x-x'}
+\end{equation}
+
+
+
+At high frequencies the integral can be approximated by the stationary phase approximation,
+which in two dimensions is given by
+\begin{equation}
+	\int g(x) e^{ikf(x)}
+	\approx \frac{2\pi}{k} g(x^*)
+	\abs{\det \nabla^2 f(x^*)}^{-1/2}
+	e^{ikf(x^*) + \frac{i\pi}{4}\text{sign}\nabla^2 f(x^*)}
+\end{equation}
+for
+\begin{equation}
+	\nabla f(x^*) = 0.
+\end{equation}
+To apply this, we set
+\begin{equation}
+	g(x') = 
+	\mathbf{J} \times \hat{R}
+	\left( ik + \frac{1}{R} \right)
+	\frac{1}{4\pi R}
+\end{equation}
+and
+\begin{equation}
+	f(x') = -\norm{x-x'} - \hat{v}\cdot x'.
+\end{equation}
+
 
 
 
