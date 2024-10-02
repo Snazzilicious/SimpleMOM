@@ -100,7 +100,9 @@ sp.Q.positive(h)
 
 f = - sp.sqrt( y1**2 + y2**2 + h**2 ) - a*y1 - b*y2
 
+grad = [sp.simplify(sp.diff(f,var)) for var in [y1,y2]]
 
+hess = [[sp.simplify(sp.diff(df,var)) for var in [y1,y2]] for df in grad]
 
 
 
