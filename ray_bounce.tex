@@ -204,6 +204,30 @@ which perfectly cancels the incident wave.
 The surface therefore can be treated as impenetrable.
 
 
+With this result we can simplify the integral equations.
+First by inserting the approximated form of the integral over each subdomain,
+then by restricting the summation to only be over terms for which there is an
+unobstructed path $\hat{R}$ from the subdomain to the test location.
+\begin{equation}
+	2\hat{n}\times\mathbf{H}_i(x)
+	= \mathbf{J}(x)
+	- \sum_{n\in V_x} 2\hat{n}\times
+	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*_n\right)}
+	\mathbf{J}(x^{'*}_n) \times \hat{R}^*_n
+	e^{-ik\hat{R}^*_n\cdot (R^*_n\hat{R}^*_n)}
+\end{equation}
+
+An iterative algorithm naturally follows to compute the total current $J(x)$ that solves this system of equations.
+Trace rays.
+Compute currents.
+Compute relected direction.
+Compute reflected amplitude.
+Trace new rays.
+Repeat until convergence.
+
+Re-section this document.
+
+use bar instead of prime or something
 
 
 \end{document}
