@@ -36,13 +36,13 @@ We start with the MFIE problem defined by
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x'} G(x,x') dS'.
+	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x} G(x,x') dS'.
 \end{equation}
 We then break the domain of integration into pieces
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x'} G(x,x') dS'.
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x} G(x,x') dS'.
 \end{equation}
 We assume flat subdomains, which are excited by plane waves of the form
 \begin{equation}
@@ -155,10 +155,10 @@ and eigenvalues
 
 
 
-The approximated radiation integral is not 
+The approximated radiation integral is now 
 \begin{equation}
 	\mathbf{H}(x) \approx
-	-\frac{2\pi}{k}
+	\frac{2\pi}{k}
 	\mathbf{J} \times \hat{R}^*
 	\left( ik + \frac{1}{R^*} \right)
 	\frac{1}{4\pi R^*}
@@ -169,20 +169,20 @@ The approximated radiation integral is not
 \end{equation}
 \begin{equation}
 	=
-	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}
+	\frac{1}{2\abs{\hat{n}\cdot\hat{R}^*}}
 	\left( 1 + \frac{1}{ikR^*} \right)
 	\mathbf{J}(x^{'*}) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
 \begin{equation}
 	\approx
-	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}
+	\frac{1}{2\abs{\hat{n}\cdot\hat{R}^*}}
 	\mathbf{J}(x^{'*}) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
 \begin{equation}
 	=
-	-\frac{1}{\left(\hat{n}\cdot\hat{R}^*\right)}
+	\frac{1}{\abs{\hat{n}\cdot\hat{R}^*}}
 	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
@@ -193,10 +193,10 @@ $\hat{R}=\hat{p}$,
 and keep in mind that the amplitude of the incident wave is perpendicular to its propagation direction,
 we get the scattered amplitude
 \begin{equation}
-	-\frac{1}{\left(\hat{n}\cdot\hat{R}^*\right)}
+	\frac{1}{\abs{\hat{n}\cdot\hat{R}^*}}
 	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
 	=
-	-\frac{1}{\left(\hat{n}\cdot\hat{p}\right)}
+	\frac{1}{\abs{\hat{n}\cdot\hat{p}}}
 	\left( \left(\hat{n}\cdot\hat{p}\right)\mathbf{H}_i(x^{'*}) - \left( \hat{p}\cdot\mathbf{H}_i(x^{'*}) \right)\hat{n} \right)
 	= -\mathbf{H}_i(x^{'*})
 \end{equation}
@@ -212,18 +212,46 @@ unobstructed path $\hat{R}$ from the subdomain to the test location.
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
 	- \sum_{n\in V_x} 2\hat{n}\times
-	-\frac{1}{2\left(\hat{n}\cdot\hat{R}^*_n\right)}
+	\frac{1}{2\left(\hat{n}\cdot\hat{R}^*_n\right)}
 	\mathbf{J}(x^{'*}_n) \times \hat{R}^*_n
 	e^{-ik\hat{R}^*_n\cdot (R^*_n\hat{R}^*_n)}
 \end{equation}
 
 An iterative algorithm naturally follows to compute the total current $J(x)$ that solves this system of equations.
-Trace rays.
-Compute currents.
-Compute relected direction.
-Compute reflected amplitude.
-Trace new rays.
-Repeat until convergence.
+It begins by decomposing the incident excitation into rays.
+These rays are traced to see if and where they strike the surface of the scatterer.
+Whenever rays strike the surface, currents are computed via $\mathbf{J}=2\hat{n}\times \mathbf{H}_i$
+and stored for radiating later.
+Then the reflected direction is computed via $\hat{R} = \hat{p} - 2(\hat{n}\cdot\hat{p})\hat{n}$
+and a reflected amplitude is computed via $\mathbf{H} = \frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}\mathbf{J} \times \hat{R}$.
+A reflected ray is computed with these values and is saved in a queue to be the input of this procedure again.
+The procedure is performed repeatedly until no new rays are created or the currents are sufficiently converged.
+The currents can then be radiated to the farfield. This algorithm is shown in Algorithm \ref{alg:posbr}.
+\begin{algorithm}
+\caption{PO-SBR}\label{alg:posbr}
+\begin{algorithmic}[1]
+\State $currents \gets \emptyset$
+\State $rayBuffer \gets \emptyset$
+\State $rayBuffer.push( excitation.rays )$
+\While{$rayBuffer.size > 0$}
+\State $ray \gets rayBuffer.pop()$
+\State $facet \gets trace(ray)$
+\If{$facet$ is not None}
+    \State $J \gets 2*facet.normal \times ray.amplitude(facet)$
+    \State $currents.push(J)$
+    \State $newRay.direction \gets ray.direction - 2*(ray.direction \cdot facet.normal)*facet.normal$
+    \State $newRay.amplitude \gets \frac{0.5}{\left(facet.normal\cdot newRay.direction\right)} J \times newRay.direction$
+    \State $rayBuffer.push( newRay )$
+\EndIf
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+
+Off by a negative sign!!
+Double check sign of grad G.
+Double check MFIE.
+May need full MFIE to show wave cancellation
 
 Re-section this document.
 
