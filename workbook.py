@@ -92,8 +92,13 @@ hess_2c = sp.Matrix([[sp.simplify(x) for x in row] for row in hess_2b])
 
 
 
+import sympy as sp
+
+y1,y2, h, a,b = sp.symbols("y1 y2 h a b", real=True)
+sp.Q.positive(h)
 
 
+f = - sp.sqrt( y1**2 + y2**2 + h**2 ) - a*y1 - b*y2
 
 
 

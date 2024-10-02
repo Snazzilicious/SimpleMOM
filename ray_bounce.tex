@@ -221,16 +221,16 @@ We assume flat subdomains, which are excited by plane waves of the form
 \end{equation}
 The induced currents are therefore also plane waves of the form
 \begin{equation}
-	\mathbf{J}(x') = \mathbf{J}e^{-ik \hat{v} \cdot x'},
+	\mathbf{J}(x') = \mathbf{J}e^{-ik \mathbf{v} \cdot x'},
 	\quad \mathbf{J} = 2\hat{n}\times\mathbf{H},
-	\quad \hat{v} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}.
+	\quad \mathbf{v} = \hat{p} - \left( \hat{n}\cdot\hat{p} \right)\hat{n}.
 \end{equation}
 The integral over the subdomain of one of these currents is
 \begin{equation}
 	\int_{\Omega_n}
 	\mathbf{J} \times \hat{R}
 	\left( ik + \frac{1}{R} \right)
-	\frac{e^{-ik\left(R + \hat{v} \cdot x'\right)}}{4\pi R} dS',
+	\frac{e^{-ik\left(R + \mathbf{v} \cdot x'\right)}}{4\pi R} dS',
 	\quad R = \norm{x-x'}
 \end{equation}
 
@@ -257,11 +257,40 @@ To apply this, we set
 \end{equation}
 and
 \begin{equation}
-	f(x') = -\norm{x-x'} - \hat{v}\cdot x'.
+	f(x') = -\norm{x-x'} - \mathbf{v}\cdot x'.
 \end{equation}
 
-
-
-
+To find the stationary point of the phase function we first parameterize the phase function
+in terms of variables on the surface of the subdomain. This parameterization is of the form
+\begin{equation}
+	x' = Jy' + x - h\hat{n},
+\end{equation}
+where $J$ is a unitary matrix of two vectors on the surface of the subdomain
+and $h$ is the height of $x$ above the surface.
+The parameterized phase function is
+\begin{equation}
+	f(y') = -\norm{-Jy' + h\hat{n}} - \mathbf{v}^T Jy' - \mathbf{v}^T x
+	= - \sqrt{ y'^Ty' + h^2 } - \mathbf{v}^T Jy' - \mathbf{v}^T x.
+\end{equation}
+The gradient is
+\begin{equation}
+	\nabla_{y'} f(y') = 
+	\begin{bmatrix}
+		\frac{-y_1'}{\sqrt{y_1^{'2} + y_2^{'2} + h^2}} - (\mathbf{v}^TJ)_1 \\
+		\frac{-y_2'}{\sqrt{y_1^{'2} + y_2^{'2} + h^2}} - (\mathbf{v}^TJ)_2
+	\end{bmatrix}.
+\end{equation}
+The stationary point is therefore
+\begin{equation}
+	y^{'*} = \left( \frac{-h(\mathbf{v}^TJ)_1}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}, \frac{-h(\mathbf{v}^TJ)_2}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }} \right)
+	\quad\Rightarrow\quad x^{'*} = x - \frac{h}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}\mathbf{v} - h\hat{n},
+\end{equation}
+so
+\begin{equation}
+	R^* = \frac{h}{\sqrt{1-\norm{v}^2}},
+	\quad \hat{R}^* - \left( \hat{n}\cdot\hat{R}^* \right)\hat{n} = \mathbf{v}
+	\quad\Rightarrow\quad \hat{R}^* =  \hat{p}\text{, } \hat{p} - 2\left( \hat{n}\cdot\hat{p} \right)\hat{n},
+\end{equation}
+which is consistent with Snell's law.
 
 \end{document}
