@@ -22,7 +22,7 @@
 \theoremstyle{plain}
 \newtheorem*{remark}{Remark}
 
-\title{Scattered field from plane wave on infinite flat plate}
+\title{Derivation of PO from MFIE}
 \author{Ian Holloway}
 \date{September 2024}
 
@@ -30,19 +30,17 @@
 \maketitle
 
 
-\section{Derivation of PO from MFIE}
-
 We start with the MFIE problem defined by
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x} G(x,x') dS'.
+	- 2\hat{n}\times\int \nabla_{x} G(x,x') \times \mathbf{J}(x')  dS'.
 \end{equation}
 We then break the domain of integration into pieces
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x} G(x,x') dS'.
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'.
 \end{equation}
 We assume flat subdomains, which are excited by plane waves of the form
 \begin{equation}
@@ -105,14 +103,14 @@ The gradient is
 \begin{equation}
 	\nabla_{y'} f(y') = 
 	\begin{bmatrix}
-		\frac{-y_1'}{\sqrt{y_1^{'2} + y_2^{'2} + h^2}} - (\mathbf{v}^TJ)_1 \\
-		\frac{-y_2'}{\sqrt{y_1^{'2} + y_2^{'2} + h^2}} - (\mathbf{v}^TJ)_2
+		\frac{-y_1'}{\sqrt{y_1'^{2} + y_2'^{2} + h^2}} - (\mathbf{v}^TJ)_1 \\
+		\frac{-y_2'}{\sqrt{y_1'^{2} + y_2'^{2} + h^2}} - (\mathbf{v}^TJ)_2
 	\end{bmatrix}.
 \end{equation} % note <y_1',y_2'> = c * v^TJ, then solve for c
 The stationary point is therefore
 \begin{equation}
-	y^{'*} = \left( \frac{-h(\mathbf{v}^TJ)_1}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}, \frac{-h(\mathbf{v}^TJ)_2}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }} \right)
-	\quad\Rightarrow\quad x^{'*} = x - \frac{h}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}\mathbf{v} - h\hat{n},
+	y'^{*} = \left( \frac{-h(\mathbf{v}^TJ)_1}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}, \frac{-h(\mathbf{v}^TJ)_2}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }} \right)
+	\quad\Rightarrow\quad x'^{*} = x - \frac{h}{\sqrt{ 1 - \norm{\mathbf{v}}^2 }}\mathbf{v} - h\hat{n},
 \end{equation}
 so
 \begin{equation}
@@ -125,15 +123,15 @@ which is consistent with Snell's law.
 The Hessian of the phase function is
 \begin{equation}
 	\nabla^2_{y'} f(y') =
-	\frac{1}{ \left( y_1^{'2} + y_2^{'2} + h^2 \right)^{3/2}}
+	\frac{1}{ \left( y_1'^{2} + y_2'^{2} + h^2 \right)^{3/2}}
 	\begin{bmatrix}
-		-y_2^{'2} - h^2 & y_1'y_2' \\
-		y_1'y_2' & -y_1^{'2} - h^2 
+		-y_2'^{2} - h^2 & y_1'y_2' \\
+		y_1'y_2' & -y_1'^{2} - h^2 
 	\end{bmatrix}
 \end{equation}
 and at the stationary point
 \begin{equation}
-	\nabla^2_{y'} f(y^{'*}) =
+	\nabla^2_{y'} f(y'^{*}) =
 	\frac{\sqrt{1-\norm{v}^2}}{h}
 	\begin{bmatrix}
 		(\mathbf{v}^TJ)_1^2 - 1 & (\mathbf{v}^TJ)_1(\mathbf{v}^TJ)_2 \\
@@ -142,15 +140,15 @@ and at the stationary point
 \end{equation}
 with determinant
 \begin{equation}
-	\det \nabla^2 f(y^{'*})
+	\det \nabla^2 f(y'^{*})
 	= \frac{1-\norm{\mathbf{v}}^2}{R^{*2}}
 	= \frac{\left(\hat{n}\cdot\hat{R}^*\right)^2}{R^{*2}}
 \end{equation}
 and eigenvalues
 \begin{equation}
-	\lambda\left( \nabla^2 f(y^{'*}) \right) = 
+	\lambda\left( \nabla^2 f(y'^{*}) \right) = 
 	-1, -\left( 1-\norm{\mathbf{v}}^2 \right)
-	\quad\Rightarrow\quad \text{sign}\nabla^2 f(y^{'*}) = -2.
+	\quad\Rightarrow\quad \text{sign}\nabla^2 f(y'^{*}) = -2.
 \end{equation}
 
 
@@ -164,26 +162,26 @@ The approximated radiation integral is now
 	\frac{1}{4\pi R^*}
 	\left( \frac{\left(\hat{n}\cdot\hat{R}^*\right)^2}{R^{*2}} \right)^{-1/2}
 	e^{-ikR^*}
-	e^{-ik\mathbf{v}\cdot x^{'*}}
+	e^{-ik\mathbf{v}\cdot x'^{*}}
 	e^{\frac{-i\pi}{2}}
 \end{equation}
 \begin{equation}
 	=
 	\frac{1}{2\abs{\hat{n}\cdot\hat{R}^*}}
 	\left( 1 + \frac{1}{ikR^*} \right)
-	\mathbf{J}(x^{'*}) \times \hat{R}^*
+	\mathbf{J}(x'^{*}) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
 \begin{equation}
 	\approx
 	\frac{1}{2\abs{\hat{n}\cdot\hat{R}^*}}
-	\mathbf{J}(x^{'*}) \times \hat{R}^*
+	\mathbf{J}(x'^{*}) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
 \begin{equation}
 	=
 	\frac{1}{\abs{\hat{n}\cdot\hat{R}^*}}
-	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
+	\left( \hat{n} \times \mathbf{H}_i(x'^{*}) \right) \times \hat{R}^*
 	e^{-ik\hat{R}^*\cdot (R^*\hat{R}^*)}
 \end{equation}
 Note that there is no leading factor of $1/R$,
@@ -194,11 +192,11 @@ and keep in mind that the amplitude of the incident wave is perpendicular to its
 we get the scattered amplitude
 \begin{equation}
 	\frac{1}{\abs{\hat{n}\cdot\hat{R}^*}}
-	\left( \hat{n} \times \mathbf{H}_i(x^{'*}) \right) \times \hat{R}^*
+	\left( \hat{n} \times \mathbf{H}_i(x'^{*}) \right) \times \hat{R}^*
 	=
 	\frac{1}{\abs{\hat{n}\cdot\hat{p}}}
-	\left( \left(\hat{n}\cdot\hat{p}\right)\mathbf{H}_i(x^{'*}) - \left( \hat{p}\cdot\mathbf{H}_i(x^{'*}) \right)\hat{n} \right)
-	= -\mathbf{H}_i(x^{'*})
+	\left( \left(\hat{n}\cdot\hat{p}\right)\mathbf{H}_i(x'^{*}) - \left( \hat{p}\cdot\mathbf{H}_i(x'^{*}) \right)\hat{n} \right)
+	= -\mathbf{H}_i(x'^{*})
 \end{equation}
 which perfectly cancels the incident wave.
 The surface therefore can be treated as impenetrable.
@@ -213,11 +211,11 @@ unobstructed path $\hat{R}$ from the subdomain to the test location.
 	= \mathbf{J}(x)
 	- \sum_{n\in V_x} 2\hat{n}\times
 	\frac{1}{2\left(\hat{n}\cdot\hat{R}^*_n\right)}
-	\mathbf{J}(x^{'*}_n) \times \hat{R}^*_n
+	\mathbf{J}(x'^{*}_n) \times \hat{R}^*_n
 	e^{-ik\hat{R}^*_n\cdot (R^*_n\hat{R}^*_n)}
 \end{equation}
 
-An iterative algorithm naturally follows to compute the total current $J(x)$ that solves this system of equations.
+An iterative algorithm naturally follows to compute the total current $\mathbf{J}(x)$ that solves this system of equations.
 It begins by decomposing the incident excitation into rays.
 These rays are traced to see if and where they strike the surface of the scatterer.
 Whenever rays strike the surface, currents are computed via $\mathbf{J}=2\hat{n}\times \mathbf{H}_i$
@@ -226,7 +224,7 @@ Then the reflected direction is computed via $\hat{R} = \hat{p} - 2(\hat{n}\cdot
 and a reflected amplitude is computed via $\mathbf{H} = \frac{1}{2\left(\hat{n}\cdot\hat{R}^*\right)}\mathbf{J} \times \hat{R}$.
 A reflected ray is computed with these values and is saved in a queue to be the input of this procedure again.
 The procedure is performed repeatedly until no new rays are created or the currents are sufficiently converged.
-The currents can then be radiated to the farfield. This algorithm is shown in Algorithm \ref{alg:posbr}.
+The currents can then be radiated to the farfield. This algorithm is pseudocoded in Algorithm \ref{alg:posbr}.
 \begin{algorithm}
 \caption{PO-SBR}\label{alg:posbr}
 \begin{algorithmic}[1]
@@ -248,14 +246,16 @@ The currents can then be radiated to the farfield. This algorithm is shown in Al
 \end{algorithm}
 
 
-Off by a negative sign!!
-Double check sign of grad G.
-Double check MFIE.
-May need full MFIE to show wave cancellation
+Beware the negative signs negative signs!!
 
-Re-section this document.
+Don't forget to update PPT.
 
-use bar instead of prime or something
+\begin{equation}
+	2\hat{n}\times\mathbf{H}_i(x)
+	= \left( \mathbf{J}(x)
+	- 2\hat{n}\times\int_{\Omega_m} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'\right)
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'.
+\end{equation}
 
 
 \end{document}
