@@ -14,6 +14,8 @@
 \newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
 \newcommand{\Div}[0]{\nabla\cdot}
 \newcommand{\Curl}[0]{\nabla\times}
+\newcommand{\pDiv}[0]{\nabla'\cdot}
+\newcommand{\pCurl}[0]{\nabla'\times}
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{corollary}{Corollary}[theorem]
@@ -30,19 +32,263 @@
 \maketitle
 
 
+\section{Derivation of Integral Equations from Maxwell's Equations}
+
+Maxwell's Equations are
+\begin{equation}
+	\Div\mathbf{E} = \frac{\rho_e}{\epsilon_0}
+\end{equation}
+\begin{equation}
+	\Div\mathbf{H} = \frac{\rho_m}{\mu_0}
+\end{equation}
+\begin{equation}
+	\Curl\mathbf{E} = -\mathbf{M} -\mu_0\frac{d\mathbf{H}}{dt}
+\end{equation}
+\begin{equation}
+	\Curl\mathbf{H} = \mathbf{J} + \epsilon_0\frac{d\mathbf{E}}{dt}
+\end{equation}
+\begin{equation}
+	\frac{d\rho_e}{dt} + \Div\mathbf{J} = 0.
+\end{equation}
+\begin{equation}
+	\frac{d\rho_m}{dt} + \Div\mathbf{M} = 0.
+\end{equation}
+We are assuming that the permeability and permittivity are constant.
+We also will assume time-harmonic solutions, e.g. $\mathbf{E}(x,t)=\mathbf{E}(x)e^{i\omega t}$, which gives
+\begin{equation}
+	\Div\mathbf{E} = \frac{\rho_e}{\epsilon_0}
+\end{equation}
+\begin{equation}
+	\Div\mathbf{H} = \frac{\rho_m}{\mu_0}
+\end{equation}
+\begin{equation}
+	\Curl\mathbf{E} = -\mathbf{M} -i\omega\mu_0\mathbf{H}
+\end{equation}
+\begin{equation}
+	\Curl\mathbf{H} = \mathbf{J} + i\omega\epsilon_0\mathbf{E}
+\end{equation}
+\begin{equation}
+	i\omega\rho_e + \Div\mathbf{J} = 0.
+\end{equation}
+\begin{equation}
+	i\omega\rho_m + \Div\mathbf{M} = 0.
+\end{equation}
+
+
+To establish an integral representation of the equation, we first let
+\begin{equation}
+	\mathbf{E} = \mathbf{A} + \nabla\phi,
+\end{equation}
+where $\mathbf{A}$ is some vector function and $\phi$ some scalar function.
+We then plug this into the curl-E equation to get
+\begin{equation}
+	\mathbf{H} = -\frac{1}{i\omega\mu_0}\left( \Curl\mathbf{A} + \mathbf{M} \right).
+\end{equation}
+Upon plugging this into the divergence-H equation we get
+\begin{equation}
+	-\frac{1}{i\omega\mu_0}\Div\mathbf{M} = \frac{\rho_m}{\mu_0},
+\end{equation}
+which satisfies the magnetic charge continuity equation.
+
+We now plug the equations for $\mathbf{E}$ and $\mathbf{H}$ into the curl-H equation which gives
+\begin{equation}
+	-\frac{1}{i\omega\mu_0}\Curl\Curl\mathbf{A}
+	-\frac{1}{i\omega\mu_0}\Curl\mathbf{M}
+	=
+	\mathbf{J}
+	+ i\omega\epsilon_0\mathbf{A}
+	+ i\omega\epsilon_0\nabla\phi,
+\end{equation}
+\begin{equation}
+	\nabla(\Div\mathbf{A}) - \nabla^2\mathbf{A}
+	+ \Curl\mathbf{M}
+	=
+	-i\omega\mu_0\mathbf{J}
+	+ \omega^2\mu_0\epsilon_0\mathbf{A}
+	+ \omega^2\mu_0\epsilon_0\nabla\phi,
+\end{equation}
+\begin{equation}
+	\nabla^2\mathbf{A}
+	+ \omega^2\mu_0\epsilon_0\mathbf{A}
+	=
+	i\omega\mu_0\mathbf{J}
+	+ \Curl\mathbf{M}
+	+ \nabla(\Div\mathbf{A} - \omega^2\mu_0\epsilon_0\phi).
+\end{equation}
+If we set,
+\begin{equation}
+	\phi = \frac{1}{\omega^2\mu_0\epsilon_0}\Div\mathbf{A},
+\end{equation}
+then we have
+\begin{equation}
+	\nabla^2\mathbf{A}
+	+ \omega^2\mu_0\epsilon_0\mathbf{A}
+	=
+	i\omega\mu_0\mathbf{J}
+	+ \Curl\mathbf{M}
+\end{equation}
+which is the Helmholtz Equation.
+Before solving this, we plug the expression for $\mathbf{E}$ and the electric charge continuity equation
+into the divergence-E equation to get
+\begin{equation}
+	\Div\mathbf{A} + \nabla^2\phi = -\frac{1}{i\omega\epsilon_0}\Div\mathbf{J}
+\end{equation}
+\begin{equation}
+	\nabla^2\phi + \omega^2\mu_0\epsilon_0\phi = -\frac{1}{i\omega\epsilon_0}\Div\mathbf{J}
+\end{equation}
+which is also a Helmholtz Equation.
+
+The solution to the Helmholtz Equation can be computed via Green's function.
+That is
+\begin{equation}
+	\nabla^2u + k^2u = f
+	\Leftrightarrow
+	u(x) = \int G(x,x')f(x') \,dx'.
+\end{equation}
+So, we can now write
+\begin{equation}
+	\mathbf{A} = \int G\left( i\omega\mu_0\mathbf{J} + \pCurl\mathbf{M} \right) \,dx'
+\end{equation}
+and also
+\begin{equation}
+	\phi = -\frac{1}{i\omega\epsilon_0} \int G \pDiv\mathbf{J} \,dx'
+\end{equation}
+We now can write down the integral equations for $\mathbf{E}$ and $\mathbf{H}$.
+\begin{equation}
+	\mathbf{E} =
+	\left(1 + \frac{1}{\omega^2\mu_0\epsilon_0}\nabla\Div\right)
+	\int G\left( i\omega\mu_0\mathbf{J} + \pCurl\mathbf{M} \right) \,dx'
+\end{equation}
+or
+\begin{equation}
+	\mathbf{E} =
+	\int G\left( i\omega\mu_0\mathbf{J} + \pCurl\mathbf{M} \right)
+	- \frac{1}{i\omega\epsilon_0} \nabla G \pDiv\mathbf{J} \,dx'
+\end{equation}
+and
+\begin{equation}
+	\mathbf{H} = 
+	\int  \left( \mathbf{J} + \frac{1}{i\omega\mu_0}\pCurl\mathbf{M} \right) \times \nabla G \,dx'
+	-\frac{1}{i\omega\mu_0}\mathbf{M}.
+\end{equation}
+
+
+
+\section{Derivation of Helmholtz Green's Function}
+
+In order to evaluate the integrals in the integral equations for $\mathbf{E}$ and $\mathbf{H}$,
+we need an explicit formula for the Green's function, $G$.
+To do so we seek a function which satisfies
+\begin{equation}
+	\left( \nabla^2 + k^2 \right)G(x,x') = \delta^3(x-x'),
+\end{equation}
+which implies
+\begin{equation*}
+	\left( \nabla^2 + k^2 \right)
+	\int G(x,x')f(x') \,dx'
+\end{equation*}
+\begin{equation*}
+	= \int \left( \nabla^2G(x,x') + k^2G(x,x') \right)
+	f(x') \,dx'
+\end{equation*}
+\begin{equation*}
+	= \int \delta^3(x-x')f(x') \,dx'
+\end{equation*}
+\begin{equation}
+	= f(x).
+\end{equation}
+
+We start by assuming spherical symmetry and so put the equation in spherical coordinates with $r=\norm{x-x'}$,
+and keep only terms involving derivatives w.r.t $r$.
+\begin{equation}
+	\frac{1}{r}\frac{d^2}{dr^2}\left( r G \right) + k^2G
+	= \delta^3(r).
+\end{equation}
+Now consider $r\neq 0$.
+\begin{equation}
+	\frac{d^2}{dr^2}\left( r G \right) + k^2rG
+	= 0 \Rightarrow
+	rG = C_1e^{-ikr} + C_2e^{ikr}.
+\end{equation}
+We keep only the outgoing wave by setting $C_2=0$ and thus get
+\begin{equation}
+	G = C_1 \frac{e^{-ikr}}{r}.
+\end{equation}
+We now need to determine the leading coefficient.
+To that end we integrate the delta-driven Helmholtz equation
+over a ball of radius $R$ centered at $r=0$
+\begin{equation*}
+	\int_\Omega \left( \nabla^2 + k^2 \right)G \,dV
+	= \int_\Omega \delta^3(r) \,dV
+\end{equation*}
+\begin{equation}
+	\int_{\partial\Omega} \nabla G\cdot dS
+	+ \int_\Omega k^2G \,dV
+	= 1.
+\end{equation}
+The first term is
+\begin{equation*}
+	\int_{\partial\Omega} \nabla G\cdot dS
+	= \int_{\partial\Omega} \frac{dG}{dr} \hat{r}\cdot dS
+	= 4\pi R^2 \frac{dG}{dr}
+\end{equation*}
+\begin{equation}
+	= -4\pi e^{-ikR} \left( 1+ikR \right) C_1.
+\end{equation}
+The second term is
+\begin{equation*}
+	\int_\Omega k^2G \,dV
+	= k^2 C_1 \int_0^{2\pi}\int_0^\pi\int_0^R \frac{e^{-ikr}}{r} \, r^2drd\theta d\phi
+	= 4\pi k^2 C_1 \int_0^R re^{-ikr} \, dr
+\end{equation*}
+\begin{equation*}
+	= 4\pi k^2 C_1 \left[ \frac{Re^{ikR}}{-ik} + \frac{1}{k^2}\left(e^{-ikR}-1\right) \right]
+\end{equation*}
+\begin{equation}
+	= 4\pi \left[ \left( ikR+1 \right) e^{-ikR}-1\right] C_1.
+\end{equation}
+The total integral is therefore
+\begin{equation*}
+	-4\pi e^{-ikR} \left( 1+ikR \right) C_1
+	+ 4\pi \left[ \left( ikR+1 \right) e^{-ikR}-1\right] C_1
+	= 1
+\end{equation*}
+\begin{equation}
+	-4\pi C_1 = 1.
+\end{equation}
+So finally we have
+\begin{equation}
+	G(x,x') = -\frac{e^{-ik\norm{x-x'}}}{4\pi\norm{x-x'}}
+\end{equation}
+and
+\begin{equation}
+	\nabla G(x,x') = \frac{e^{-ikR}}{4\pi R} \left( ik + \frac{1}{R} \right) \hat{R}
+	\quad R = \norm{x-x'}.
+\end{equation}
+
+
+% TODO gradient of Green's function
+
+
+\section{Derivation of Boundary Conditions}
+
+Under Construction.
+
+
+
 \section{Derivation of PO-SBR from MFIE}
 
 We start with the MFIE problem defined by
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- 2\hat{n}\times\int \nabla_{x} G(x,x') \times \mathbf{J}(x')  dS'.
+	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x} G(x,x') \,dS'.
 \end{equation}
 We then break the domain of integration into pieces
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'.
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x} G(x,x') \,dS'.
 \end{equation}
 We assume flat subdomains, which are excited by plane waves of the form
 \begin{equation}
@@ -59,7 +305,7 @@ The integral over the subdomain of one of these currents is
 	\int_{\Omega_n}
 	\mathbf{J} \times \hat{R}
 	\left( ik + \frac{1}{R} \right)
-	\frac{e^{-ik\left(R + \mathbf{v} \cdot x'\right)}}{4\pi R} dS',
+	\frac{e^{-ik\left(R + \mathbf{v} \cdot x'\right)}}{4\pi R} \,dS',
 	\quad R = \norm{x-x'}
 \end{equation}
 
@@ -248,14 +494,12 @@ The currents can then be radiated to the farfield. This algorithm is pseudocoded
 \end{algorithm}
 
 
-Note to self: Beware the negative signs negative signs!!
-
 Equation in MOM regions:
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \left( \mathbf{J}(x)
-	- 2\hat{n}\times\int_{\Omega_m} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'\right)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') dS'.
+	- 2\hat{n}\times\int_{\Omega_m} \nabla_{x} G(x,x') \times \mathbf{J}(x') \,dS'\right)
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') \,dS'.
 \end{equation}
 
 
