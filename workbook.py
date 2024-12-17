@@ -94,13 +94,21 @@ hess_2c = sp.Matrix([[sp.simplify(x) for x in row] for row in hess_2b])
 
 import sympy as sp
 
-y1,y2, h, a,b = sp.symbols("y1 y2 h a b", real=True)
+y1,y2, h, a,b, C, s = sp.symbols("y1 y2 h a b C s", real=True)
 sp.Q.positive(h)
 
 
 f = - sp.sqrt( y1**2 + y2**2 + h**2 ) - a*y1 - b*y2
 
 grad = [sp.simplify(sp.diff(f,var)) for var in [y1,y2]]
+
+hess = [[sp.simplify(sp.diff(df,var)) for var in [y1,y2]] for df in grad]
+
+
+f = - sp.sqrt( y1**2 + y2**2 + h**2 ) - sp.sqrt( y1**2 + y2**2 + 2*a*y1 + 2*b*y2 + C )
+
+grad = [sp.simplify(sp.diff(f,var)) for var in [y1,y2]]
+#sp.solve( grad[0].subs([(y1,s*a),(y2,s*b)]), s )
 
 hess = [[sp.simplify(sp.diff(df,var)) for var in [y1,y2]] for df in grad]
 
