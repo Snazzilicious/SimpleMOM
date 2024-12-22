@@ -272,7 +272,7 @@ and
 
 \section{Derivation of Boundary Conditions}
 
-Under Construction.
+WIP.
 
 
 
@@ -282,13 +282,13 @@ We start with the MFIE problem defined by
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla_{x} G(x,x') \,dS'.
+	- 2\hat{n}\times\int \mathbf{J}(x') \times \nabla G(x,x') \,dS'.
 \end{equation}
 We then break the domain of integration into pieces
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \mathbf{J}(x)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla_{x} G(x,x') \,dS'.
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla G(x,x') \,dS'.
 \end{equation}
 We assume flat subdomains, which are excited by plane waves of the form
 \begin{equation}
@@ -494,12 +494,16 @@ The currents can then be radiated to the farfield. This algorithm is pseudocoded
 \end{algorithm}
 
 
+
+
+\section{Hybrid Methods}
+
 Equation in MOM regions:
 \begin{equation}
 	2\hat{n}\times\mathbf{H}_i(x)
 	= \left( \mathbf{J}(x)
-	- 2\hat{n}\times\int_{\Omega_m} \nabla_{x} G(x,x') \times \mathbf{J}(x') \,dS'\right)
-	- \sum_n 2\hat{n}\times\int_{\Omega_n} \nabla_{x} G(x,x') \times \mathbf{J}(x') \,dS'.
+	- 2\hat{n}\times\int_{\Omega_m} \mathbf{J}(x') \times \nabla G(x,x') \,dS'\right)
+	- \sum_n 2\hat{n}\times\int_{\Omega_n} \mathbf{J}(x') \times \nabla G(x,x') \,dS'.
 \end{equation}
 
 
