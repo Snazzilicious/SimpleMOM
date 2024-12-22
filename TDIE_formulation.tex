@@ -1,0 +1,154 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
+\newcommand{\Div}[0]{\nabla\cdot}
+\newcommand{\Curl}[0]{\nabla\times}
+\newcommand{\pDiv}[0]{\nabla'\cdot}
+\newcommand{\pCurl}[0]{\nabla'\times}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{plain}
+\newtheorem*{remark}{Remark}
+
+\title{Non-LTI Electromagnetic Scattering}
+\author{Ian Holloway}
+\date{December 2024}
+
+\begin{document}
+\maketitle
+
+
+\section{Introduction}
+
+Linear methods such as MOM based on the EFIE or MFIE have proven powerful for the analysis of EM system.
+Recently however interest has grown in non-linear circuitry which violates some of the key assumptions of the linear methods.
+A more general method of simulation is thus necessary.
+
+
+\section{Formulation}
+
+The proposed method is based on the Jefimenko equations
+which are generalizations of Coulomb's Law and the Biot-Savart law
+for time-depedant charge and current distributions.
+These are
+\begin{equation}
+	\mathbf{E}(x,t) = \frac{1}{4\pi\epsilon_0} \int
+	\left( \frac{\rho(x^{'},t)}{R^2}
+	+ \frac{1}{cR}\frac{\partial\rho}{\partial t}(x^{'},t_r)
+	\right) \hat{R}
+	- \frac{1}{c^2R}\frac{\partial\mathbf{J}}{\partial t}(x^{'},t_r)
+	\,dx^{'}
+\end{equation}
+and
+\begin{equation}
+	\mathbf{B}(x,t) = -\frac{\mu_0}{4\pi} \int
+	\hat{R} \times \left(
+	\frac{1}{R^2}\mathbf{J}(x^{'},t_r)
+	+ \frac{1}{cR}\frac{\partial\mathbf{J}}{\partial t}(x^{'},t_r)
+	\right) \,dx^{'},
+\end{equation}
+where $R=\norm{x-x^{'}}$, $\hat{R} = (x-x^{'})/R$, and $t_r=t-R/c$ is the retarded time.
+The domain of integration is the surface of the non-linear scatterer,
+just as is the case in MOM-IE.
+
+To complete the method, expressions giving the time derivatives of $\rho$ and $\mathbf{J}$ are necessary.
+By definition,
+\begin{equation}
+	\frac{\partial\rho}{\partial t} = -\Div\mathbf{J}.
+\end{equation}
+I propose that we use Newton's second law to produce an equation for $\frac{\partial\mathbf{J}}{\partial t}$.
+That is
+\begin{equation*}
+	\frac{\partial}{\partial t}(\rho_m\mathbf{v})
+	= \mathbf{F}
+	- \Div(\rho_m\mathbf{v}\otimes\mathbf{v})
+\end{equation*}
+\begin{equation*}
+	\frac{\partial}{\partial t}\left( \frac{m_e}{e}\rho\mathbf{v} \right)
+	= \rho\mathbf{E} + \mathbf{J}\times\mathbf{B}
+	- \Div\left(\frac{m_e}{e}\rho\mathbf{v}\otimes\mathbf{v}\right)
+\end{equation*}
+\begin{equation}
+	\frac{\partial\mathbf{J}}{\partial t}
+	= \frac{e}{m_e}\left(
+	\rho\mathbf{E} + \mathbf{J}\times\mathbf{B}
+	\right)
+	- \Div\left(\frac{1}{\rho}\mathbf{J}\otimes\mathbf{J}\right).
+\end{equation}
+
+We now have
+\begin{equation}
+	\frac{\partial\rho}{\partial t} = L_\rho( x,t, \rho, \mathbf{J} )
+	\text{ and }
+	\frac{\partial\mathbf{J}}{\partial t} = L_{\mathbf{J}}( x,t, \rho, \mathbf{J} )
+\end{equation}
+with
+\begin{equation}
+	L_\rho( \rho, \mathbf{J} ) = -\Div\mathbf{J}.
+\end{equation}
+and
+\begin{multline}
+	L_{\mathbf{J}}( \rho, \mathbf{J} ) = \\
+	\frac{e}{m_e}\left[
+	\frac{\rho}{4\pi\epsilon_0} \int
+	\left( \frac{\rho(x^{'},t)}{R^2}
+	+ \frac{1}{cR}\frac{\partial\rho}{\partial t}(x^{'},t_r)
+	\right) \hat{R}
+	- \frac{1}{c^2R}\frac{\partial\mathbf{J}}{\partial t}(x^{'},t_r)
+	\,dx^{'}\right. \\
+	\left.
+	-\mathbf{J}\times
+	\frac{\mu_0}{4\pi} \int
+	\hat{R} \times \left(
+	\frac{1}{R^2}\mathbf{J}(x^{'},t_r)
+	+ \frac{1}{cR}\frac{\partial\mathbf{J}}{\partial t}(x^{'},t_r)
+	\right) \,dx^{'}
+	\right]\\
+	+ \frac{e}{m_e}\left(
+	\rho\mathbf{E}_i(x,t) + \mathbf{J}\times\mathbf{B}_i(x,t)
+	\right) \\
+	- \Div\left(\frac{1}{\rho}\mathbf{J}\otimes\mathbf{J}\right).
+\end{multline}
+Here $\mathbf{E}_i(x,t)$ and $\mathbf{B}_i(x,t)$ are the imposed electric and magnetic fields.
+
+
+\subsection{Far Field}
+
+Once we know the charge and current distributions at relevant times,
+we can compute far field.
+We define the quantity of interest as
+\begin{equation}
+	\mathbf{E}_\infty(\hat{R},t) = \lim_{r\rightarrow\infty} r\abs{\mathbf{E}(r\hat{R},t)}.
+\end{equation}
+
+Inserting the integral into this we get
+\begin{equation}
+	\mathbf{E}_\infty(\hat{R},t) = \frac{1}{4\pi\epsilon_0} \int
+	\frac{1}{c}\frac{\partial\rho}{\partial t}(x^{'},t_r) \hat{R}
+	- \frac{1}{c^2}\frac{\partial\mathbf{J}}{\partial t}(x^{'},t_r)
+	\,dx^{'},
+\end{equation}
+where the retarded time is now given by $t_r = t - \hat{R}\cdot x^{'}$.
+
+
+\section{Algorithm}
+
+% TODO save history
+
+
+
+\end{document}
