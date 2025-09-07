@@ -39,7 +39,7 @@
 * MPI support
 
 
-
+#### Modules
 * Inputs
 	* cmdline
 	* input file
@@ -76,4 +76,8 @@
 	* construct initial rays
 	* ray tracer interface
 
+
+#### Verification
+* mie series expressions on wikipedia
+* mie python
 
