@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<InputFile>
+	<Scene>
+		<meshfile>some/file/path.obj</meshfile>
+		<frequency units="GHz">1.2</frequency>
+		<excitation id="e2" type="planewave">
+			<propagation>
+				<xangle units="deg">44</xangle>
+				<zangle units="deg">34</zangle>
+			</propagation>
+			<polarization>
+				<angle units="deg">90</angle>
+				<magnitude>2.0</magnitude>
+			</polarization>
+			<observation type="FF">
+				<xangle units="deg">44</xangle>
+				<zangle units="deg">34</zangle>
+			</observation>
+		</excitation>
+	</Scene>
+	<Scene>
+		<meshfile>some/file/path.obj</meshfile>
+		<frequency units="GHz">1.2</frequency>
+		<excitation id="e1">
+			<observation type="bistatic_ff">
+				<start units="deg">
+					<xangle>0.0</xangle>
+					<zangle>90.0</zangle>
+				</start>
+				<end units="deg">
+					<xangle>180.0</xangle>
+					<zangle>90.0</zangle>
+				</end>
+				<npoints>11</npoints>
+			</observation>
+		</excitation>
+	</Scene>
+	<excitation id="e1" type="planewave">
+		<propagation>
+			<xangle units="deg">34</xangle>
+			<zangle units="deg">24</zangle>
+		</propagation>
+		<polarization>
+			<angle units="deg">0</angle>
+			<magnitude>1.0</magnitude>
+		</polarization>
+	</excitation>
+</InputFile>
