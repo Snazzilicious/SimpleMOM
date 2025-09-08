@@ -25,6 +25,7 @@
 	* trace function
 		* all combinations of org/dir layouts
 	* V&V
+	* build system
 * Properly organize modules for import
 	* set up `__init__.py`
 * Docstrings
@@ -74,7 +75,9 @@
 	* sparse solver
 * POSBR
 	* construct initial rays
-	* ray tracer interface
+	* `const` iterators
+	* `const` methods in Ray interfaces
+	* Revise or remove concrete Ray types
 
 
 #### Verification

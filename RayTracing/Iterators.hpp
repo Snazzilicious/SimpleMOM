@@ -87,7 +87,7 @@ std::pair<StrideIterator<Iterator>,StrideIterator<Iterator>> distribute_round_ro
 
 
 
-// Interface to strided data that makes it act like a normal, iterable container suach as an array or vector.
+// Interface to strided data that makes it act like a normal, iterable container such as an array or vector.
 template<typename Iterator>
 class StridedView {
 	private:

@@ -2,7 +2,7 @@
 #ifndef TRACER_NANO_RT_HPP
 #define TRACER_NANO_RT_HPP
 
-#include "../External/nanort.h"
+#include "nanort.h"
 
 class TracerNanoRT {
 	private:
@@ -11,7 +11,9 @@ class TracerNanoRT {
 		nanort::TriangleIntersector<double> triangle_intersector;
 		
 	public:
-		TracerNanoRT( std::size_t n_facets, double* vertices_begin, unsigned* facets_begin ) : triangle_intersector( vertices_begin, facets_begin, sizeof(double) * 3 ) {
+		TracerNanoRT( std::size_t n_facets, double* vertices_begin, unsigned* facets_begin ) : 
+			triangle_intersector( vertices_begin, facets_begin, sizeof(double) * 3 )
+		{			
 			// Wrap the mesh in the required objects
 			std::size_t vertices_stride = sizeof(double) * 3;
 			nanort::TriangleMesh<double> triangle_mesh( vertices_begin, facets_begin, vertices_stride );
