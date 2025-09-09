@@ -85,7 +85,7 @@ def z_angle_hat( x_angle, z_angle ):
 	return -x_angle_z_angle_to_dir( x_angle+np.pi, (np.pi/2) - z_angle )
 
 def x_angle_hat( x_angle, z_angle ):
-	return x_angle_z_angle_to_dir( x_angle+np.pi/2, np.pi/2 )
+	return x_angle_z_angle_to_dir( x_angle+np.pi/2, np.pi/2 + 0*x_angle )
 
 
 """Working with E field
@@ -142,7 +142,7 @@ def bistatic_H_field( x_z_angles, k, currents, pts, wts ):
 	ffs=np.zeros([len(x_z_angles),3],dtype=np.complex128)
 	
 	for i,(x_angle,z_angle) in enumerate(x_z_angles):
-		obs_dir = x_angle_z_angle_to_dir( x_angle, z_angle )
+		obs_dir = x_angle_z_angle_to_dir( x_angle, z_angle ).reshape(-1)
 		V = np.cross( currents, obs_dir )
 		ffs[i] = ( -1j * k / (4*np.pi) ) * np.sum( wts * np.exp( 1j*k*pts.dot(obs_dir) ) * V.T, axis=1 )
 	

@@ -2,5 +2,6 @@
 *.pdf
 *.aux
 *.out
-*.so
 *.o
+*.so
+__pycache__/*

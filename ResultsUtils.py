@@ -43,10 +43,10 @@ def get_aurora_field( filename ):
 	f = h5py.File(filename, 'r')
 	hash_string = list(f['aurorae']['results'].keys())[0]
 	
-	xz_in_angs = np.row_stack([[j for j in i] for i in list(f['aurorae']['results'][hash_string]['excitations']['planewave']['table'])])
+	xz_in_angs = np.vstack([[j for j in i] for i in list(f['aurorae']['results'][hash_string]['excitations']['planewave']['table'])])
 	xz_in_angs = xz_in_angs[:,1:]
 	
-	dat = np.row_stack([[j for j in i] for i in list(f['aurorae']['results'][hash_string]['observations']['scattered farfield']['table'])])
+	dat = np.vstack([[j for j in i] for i in list(f['aurorae']['results'][hash_string]['observations']['scattered farfield']['table'])])
 	
 	xz_out_angles = dat[:,1:3]
 	xzxz_angles = np.column_stack(( xz_in_angs, xz_out_angles ))
@@ -104,7 +104,7 @@ def get_stars_fld( filename ):
 	for line in f:
 		dat.append([float(v) for v in line.split(",")])
 	f.close()
-	dat = np.row_stack(dat)
+	dat = np.vstack(dat)
 
 	xzxz_angs = np.column_stack(( dat[:,1], dat[:,0], dat[:,3], dat[:,2] ))
 	xzxz_angs = np.deg2rad( xzxz_angs )
@@ -126,9 +126,9 @@ def get_stars_current( filename ):
 		coord.append(tmp[:3])
 		dat1.append([ complex(tmp[3],tmp[4]), complex(tmp[5],tmp[6]), complex(tmp[7],tmp[8]) ])
 		dat2.append([ complex(tmp[9],tmp[10]), complex(tmp[11],tmp[12]), complex(tmp[13],tmp[14]) ])
-	coords.append(np.row_stack(coord))
-	Js1.append(np.row_stack(dat1))
-	Js2.append(np.row_stack(dat2))
+	coords.append(np.vstack(coord))
+	Js1.append(np.vstack(dat1))
+	Js2.append(np.vstack(dat2))
 	
 	f.close()
 

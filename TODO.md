@@ -20,11 +20,6 @@
 	* scenes > contained excitations > global excitations
 * Remove 'Util' from module names
 * C ray trace
-	* use ctypes
-	* Tracer type for python
-	* trace function
-		* all combinations of org/dir layouts
-	* V&V
 	* build system
 * Properly organize modules for import
 	* set up `__init__.py`
@@ -35,6 +30,11 @@
 	* General
 	* IPO
 * PyTests
+	* Mesh readers & writers
+	* Raytracer first hits
+* V&V Tests
+* build system
+	* `g++ -fPIC -shared nanortlib.cpp -o nanortlib.so`
 * Standardized Output format
 	* With multiple frequencies
 * MPI support
@@ -77,7 +77,6 @@
 	* construct initial rays
 	* `const` iterators
 	* `const` methods in Ray interfaces
-	* Revise or remove concrete Ray types
 
 
 #### Verification

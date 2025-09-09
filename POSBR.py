@@ -3,7 +3,7 @@
 import numpy as np
 import ctypes
 
-nanort_lib = ctypes.CDLL( "nanortlib.so" )
+nanort_lib = ctypes.CDLL( "RayTracing/nanortlib.so" )
 nanort_lib.get_handle.restype = ctypes.c_void_p
 nanort_lib.intersects_first_interface.restype = None
 nanort_lib.free_handle.restype = None

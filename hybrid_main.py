@@ -114,7 +114,7 @@ obs_z_angs = np.radians(90) * np.ones( 361 )
 obs_ang_sets = [np.column_stack(( obs_x_angs,obs_z_angs ))]
 ffs = [{} for _ in range(nrhs)]
 for j in range(nrhs):
-	obs_angs = np.row_stack( obs_ang_sets[j] )
+	obs_angs = np.vstack( obs_ang_sets[j] )
 	ff = EM_Utils.bistatic_H_field( obs_angs, k, J[:,3*j:3*j+3], centroids, areas )
 	ff_x, ff_z = EM_Utils.projected_farfield( obs_angs, ff )
 	ffs[j]['x'] = ff_x

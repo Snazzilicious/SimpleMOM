@@ -5,6 +5,7 @@ sys.path.insert(0, "/home/ianh/Documents/irad_ianh/empy")
 import MeshUtils
 import EM_Utils
 import GeneralUtils
+import POSBR
 
 GeneralUtils.stdout("Beginning PO-SBR")
 
@@ -15,7 +16,7 @@ args = cmdline.parse_args()
 
 
 # load mesh
-mesh_filename = args.mesh if args.mesh is not None else "/home/ianh/Documents/Aurora/Aurora-8.0.1-LINUX/tutorial/plane_wave/smooth_bumblebee.obj"
+mesh_filename = args.mesh if args.mesh is not None else "/home/ian/Aurora-8.0.1-LINUX/tutorial/plane_wave/smooth_bumblebee.obj"
 vertices, faces, groups, gnames = MeshUtils.load_obj( mesh_filename )
 normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
@@ -61,14 +62,13 @@ GeneralUtils.stdout("Initial rays constructed")
 n_rays = len(ray_dirs)
 max_bounce_cnt = args.max_bounce if args.max_bounce is not None else 24
 bounce_cnt = 0
-import trimesh
-mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+tracer = POSBR.RayTracer( vertices, faces )
 currents=[]
 current_pts=[]
 current_wts=[]
 while bounce_cnt < max_bounce_cnt and n_rays > 0:
 	# trace rays in queue to get collisions
-	struck_face_inds = mesh.ray.intersects_first( ray_origins=ray_orgs, ray_directions=ray_dirs )
+	struck_face_inds = tracer.intersects_first( ray_orgs, ray_dirs )
 	
 	# preprocess hits 
 	n_strikes = np.sum( struck_face_inds >= 0 )
@@ -101,14 +101,14 @@ while bounce_cnt < max_bounce_cnt and n_rays > 0:
 	# compute reflected polarization
 	ray_pols = np.transpose( np.cross( J, ray_dirs ).T / ( 2 * np.abs( dir_dot_normal ) ) )
 	
-	ray_orgs += 1e-3 * ray_dirs # XXX Prevents trimesh from re-intersecting with origin face
+	ray_orgs += 1e-3 * ray_dirs # XXX Prevents tracer from re-intersecting with origin face
 	
 	bounce_cnt += 1
 	n_rays = len(ray_dirs)
 
 
-J_final = np.row_stack(currents)
-J_final_pts = np.row_stack(current_pts)
+J_final = np.vstack(currents)
+J_final_pts = np.vstack(current_pts)
 J_final_wts = np.concatenate(current_wts)
 
 GeneralUtils.stdout("Solution computed")

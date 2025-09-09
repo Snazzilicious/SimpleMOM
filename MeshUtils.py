@@ -54,7 +54,7 @@ def load_legacy_vtk( meshfilename ):
 			faces.append(tmp[1:])
 
 	n_faces=len(faces)
-	faces = np.row_stack(faces)
+	faces = np.vstack(faces)
 
 	f.close()
 	
@@ -264,7 +264,7 @@ def load_pat( meshfilename ):
 		f.readline()
 		nextline = f.readline()
 
-	vertices = np.row_stack(vertices)
+	vertices = np.vstack(vertices)
 
 	# XXX These indices are 1-based XXX
 	faces=[]
@@ -273,7 +273,7 @@ def load_pat( meshfilename ):
 		faces.append([int(i) for i in f.readline().split()])
 		nextline = f.readline()
 
-	faces = np.row_stack(faces)-1
+	faces = np.vstack(faces)-1
 
 	# XXX so are these XXX
 	groupnames=[]
@@ -330,7 +330,7 @@ def load_stars( filename ):
 		m = re.findall( "[0\-]\.[0-9]+E[+\-][0-9][-0-9]", vert_str )
 		vertices.append([ float(i) for i in m ])
 	
-	vertices = np.row_stack(vertices)
+	vertices = np.vstack(vertices)
 	
 	f.readline()
 	
@@ -339,7 +339,7 @@ def load_stars( filename ):
 	for _ in range(n_faces):
 		faces.append([ int(i) for i in f.readline().split(',')[:3] ])
 	
-	faces = np.row_stack(faces)-1
+	faces = np.vstack(faces)-1
 	
 	return vertices, faces
 
@@ -533,8 +533,8 @@ def load_obj( meshfilename ):
 
 	f.close()
 
-	vertices = np.row_stack(vertices)
-	faces = np.row_stack(faces)-1
+	vertices = np.vstack(vertices)
+	faces = np.vstack(faces)-1
 	
 	return vertices, faces, groups, groupnames
 
@@ -898,8 +898,8 @@ def mirror( plane, vertices, faces, groups, tol=1e-12 ):
 		faces2[i] = comap.get( faces2[i], faces2[i] )
 	faces2=faces2.reshape((-1,3))
 
-	new_vertices = np.row_stack(( vertices,vertices2 ))
-	new_faces = np.row_stack(( faces,faces2 ))
+	new_vertices = np.vstack(( vertices,vertices2 ))
+	new_faces = np.vstack(( faces,faces2 ))
 	new_vertices,new_faces = remove_unused( new_vertices,new_faces )
 	
 	return new_vertices, new_faces, new_groups
