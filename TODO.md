@@ -47,10 +47,6 @@
 	* scene element definitions
 	* job recipes
 * Mesh - done
-	* read mesh files -> vertices and faces
-	* connectivity
-	* basis, centroids
-	* write visualization files (vtk)
 * EM
 	* omega
 	* G, \grad G

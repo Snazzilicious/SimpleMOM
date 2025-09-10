@@ -52,32 +52,91 @@ def omega_from_k( k ):
 """
 
 def H_from_E( p,E ):
+	"""Computes the H vector associated with a plane wave with given direction and E vector.
+	
+	Arguments
+		p : ...
+			The propagation direction of the plane wave.
+		E : ...
+			The electric field polarization vector of the plane wave.
+	
+	Returns
+		H : ...
+			The magnetic polarization vector of the plane wave.
+	"""
 	return np.sqrt( eps/mu ) * np.cross( p, E )
 
 def E_from_H( p,H ):
+	"""Computes the E vector associated with a plane wave with given direction and H vector.
+	
+	Arguments
+		p : ...
+			The propagation direction of the plane wave.
+		H : ...
+			The magnetic polarization vector of the plane wave.
+	
+	Returns
+		E : ...
+			The electric field polarization vector of the plane wave.
+	"""
 	return np.sqrt( mu/eps ) * np.cross( H, p )
 
 
 def planewave( k, prop, pol, pts ):
+	"""Functional form of a plane wave.
+	
+	Arguments
+	
+	Returns
+	"""
 	return np.outer( np.exp( -1j * k * pts.dot(prop) ), pol )
 
 
 """Green's function
 """
+
 def G( x, y, k ):
+	"""Helmholtz Green's function.
+	
+	Arguments
+		x : array-like of floats
+			The field or observation point.
+		y : array-like of floats
+			The source point.
+		k : float
+			The wave number in radians per meter.
+	
+	Returns
+		G : array-like of floats
+			The value of the Helmholtz Green's function evaluted at all pairs of points passed in.
+	"""
 	R = np.linalg.norm( x-y, axis=1 )
 	return -np.exp( -1j*k*R ) / ( 4*np.pi * np.maximum( R, 1e-15 ) )
 
 def gradx_G( x, y, k ):
-	"""Gradient w.r.t. x
+	"""Gradient of the Helmholtz Green's function.
+	
+	Arguments
+		x : array-like of floats
+			The field or observation point.
+		y : array-like of floats
+			The source point.
+		k : float
+			The wave number in radians per meter.
+	
+	Returns
+		gradG : array-like of floats
+			The gradient of the Helmholtz Green's function evaluted at all pairs of points passed in.
 	"""
 	r = x - y
 	R = np.linalg.norm( r, axis=1 )
 	return ( r.T * ( 1j*k*R + 1 ) * np.exp( -1j*k*R ) / ( 4*np.pi * np.maximum( R**3, 1e-15 ) ) ).T
 
 
+
 """Spherical coordinates convenience functions
 """
+
 def x_angle_z_angle_to_dir( x_angle, z_angle ):
 	return np.column_stack([ np.cos(x_angle)*np.sin(z_angle), np.sin(x_angle)*np.sin(z_angle), np.cos(z_angle) ])
 
