@@ -27,12 +27,6 @@ def get_standard_arg_parser():
 
 
 
-from time import ctime
-
-def stdout(msg):
-	print(ctime(), msg, flush=True)
-
-
 import xmltodict
 
 def read_input_file( fname ):
