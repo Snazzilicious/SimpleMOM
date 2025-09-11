@@ -2,13 +2,14 @@
 import numpy as np
 import sys
 sys.path.insert(0, "/home/ianh/Documents/irad_ianh/empy")
+import Inputs
+import Logging
 import MeshUtils
 import EM_Utils
-import GeneralUtils
 
-GeneralUtils.stdout("Beginning MOM-MFIE")
+Logging.stdout("Beginning MOM-MFIE")
 
-cmdline = GeneralUtils.get_standard_arg_parser()
+cmdline = Inputs.get_standard_arg_parser()
 args = cmdline.parse_args()
 
 
@@ -19,7 +20,7 @@ vertices, faces, groups, gnames = MeshUtils.load_obj( mesh_filename )
 normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
 n_faces = len(faces)
-GeneralUtils.stdout("Mesh Loaded")
+Logging.stdout("Mesh Loaded")
 
 
 # Excitation params
@@ -61,7 +62,7 @@ for j in range(nrhs):
 	b[:n_faces,j] = 2 * np.sum( v1s * n_cross_H, axis=1 )
 	b[n_faces:,j] = 2 * np.sum( v2s * n_cross_H, axis=1 )
 
-GeneralUtils.stdout("Impedance matrix and RHS constructed")
+Logging.stdout("Impedance matrix and RHS constructed")
 
 sol = np.linalg.solve( M, b )
 J = ( v1s.T * sol[:n_faces,0] + v2s.T * sol[n_faces:,0] ).T
@@ -70,7 +71,7 @@ from pathlib import Path
 casename = args.output if args.output is not None else "mfie_{0:s}_{1:.0f}Hz".format( Path(mesh_filename).stem, freq )
 np.save(casename+"_current.npy", J)
 
-GeneralUtils.stdout("Solution computed")
+Logging.stdout("Solution computed")
 
 # compute farfield
 obs_x_angs = np.linspace( np.radians(-180), np.radians(180), 361 )
@@ -81,7 +82,7 @@ ff = EM_Utils.bistatic_H_field( obs_angs, k, J, centroids, areas )
 ff_x, ff_z = EM_Utils.projected_farfield( obs_angs, ff )
 #plt.plot( np.degrees(obs_x_angs), EM_Utils.to_dBsm(ff_z) )
 
-GeneralUtils.stdout("Farfield computed")
+Logging.stdout("Farfield computed")
 
 
 cell_results = { "H_inc_real" : np.real(incident), "H_inc_imag" : np.imag(incident) }

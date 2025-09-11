@@ -2,13 +2,14 @@
 import numpy as np
 import sys
 sys.path.insert(0, "/home/ianh/Documents/miscstuff")
+import Inputs
+import Logging
 import MeshUtils
 import EM_Utils
-import GeneralUtils
 
-GeneralUtils.stdout("Beginning MOM-CMA")
+Logging.stdout("Beginning MOM-CMA")
 
-cmdline = GeneralUtils.get_standard_arg_parser()
+cmdline = Inputs.get_standard_arg_parser()
 args = cmdline.parse_args()
 
 
@@ -19,7 +20,7 @@ vertices, faces, groups, gnames = MeshUtils.load_obj( mesh_filename )
 normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
 n_faces = len(faces)
-GeneralUtils.stdout("Mesh Loaded")
+Logging.stdout("Mesh Loaded")
 
 freq = args.frequency if args.frequency is not None else 1e9
 w = EM_Utils.omega_from_Hz( freq )
@@ -43,7 +44,7 @@ for i in range(n_faces):
 	M[i+n_faces,n_faces:] -= row22
 
 
-GeneralUtils.stdout("Impedance matrix constructed")
+Logging.stdout("Impedance matrix constructed")
 
 
 R = ( M + M.conj().T ) / 2.0
@@ -56,7 +57,7 @@ from pathlib import Path
 casename = args.output if args.output is not None else "cma_{0:s}_{1:.0f}Hz".format( Path(mesh_filename).stem, freq )
 np.save(casename+"_current.npy", J)
 
-GeneralUtils.stdout("Solution computed")
+Logging.stdout("Solution computed")
 
 # compute farfield
 obs_x_angs = np.linspace( np.radians(-180), np.radians(180), 361 )
@@ -67,7 +68,7 @@ ff = EM_Utils.bistatic_H_field( obs_angs, k, J, centroids, areas )
 ff_x, ff_z = EM_Utils.projected_farfield( obs_angs, ff )
 #plt.plot( np.degrees(obs_x_angs), EM_Utils.to_dBsm(ff_z) )
 
-GeneralUtils.stdout("Farfield computed")
+Logging.stdout("Farfield computed")
 
 
 cell_results = { "J_real" : np.real(J), "J_imag" :np.imag(J) }

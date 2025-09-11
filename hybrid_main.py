@@ -4,24 +4,25 @@ from scipy import sparse
 from scipy.spatial import KDTree
 import sys
 sys.path.insert(0, "/home/ianh/Documents/irad_ianh/empy")
+import Inputs
+import Logging
 import MeshUtils
 import EM_Utils
-import GeneralUtils
 import IPO
 
-GeneralUtils.stdout("Beginning Hybrid IPO-MOM")
+Logging.stdout("Beginning Hybrid IPO-MOM")
 
-cmdline = GeneralUtils.get_standard_arg_parser()
+cmdline = Logging.get_standard_arg_parser()
 args = cmdline.parse_args()
 
 
 mesh_filename = args.mesh if args.mesh is not None else "/home/ianh/Documents/Aurora/Aurora-8.0.1-LINUX/tutorial/plane_wave/smooth_bumblebee.obj"
 vertices, faces, groups, gnames = MeshUtils.load_obj( mesh_filename )
-GeneralUtils.stdout("Mesh Loaded")
+Logging.stdout("Mesh Loaded")
 normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
 n_faces = len(faces)
-GeneralUtils.stdout("Geometry calculations complete")
+Logging.stdout("Geometry calculations complete")
 
 
 # Find MOM groups
@@ -92,7 +93,7 @@ for j in range(nrhs):
 	b[n_faces:,j] = 2 * np.sum( v2s * n_cross_H, axis=1 )
 
 
-GeneralUtils.stdout("Impedance matrix and RHS constructed")
+Logging.stdout("Impedance matrix and RHS constructed")
 
 
 sol = sparse.linalg.spsolve( M, b )
@@ -105,7 +106,7 @@ casename = args.output if args.output is not None else "ipomom_{0:s}_{1:.0f}Hz".
 np.save(casename+"_current.npy", J)
 
 
-GeneralUtils.stdout("Solution computed")
+Logging.stdout("Solution computed")
 
 
 # compute farfield
@@ -122,7 +123,7 @@ for j in range(nrhs):
 	#plt.plot( np.degrees(obs_x_angs), EM_Utils.to_dBsm(ff_z) )
 
 
-GeneralUtils.stdout("Farfield computed")
+Logging.stdout("Farfield computed")
 
 
 cell_results = { "H_inc_real" : np.real(incident), "H_inc_imag" : np.imag(incident) }

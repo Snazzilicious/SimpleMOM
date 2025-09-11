@@ -69,6 +69,7 @@
 	* all pairs visibility
 	* plane wave visibility
 	* sparse solver
+	* Iterative solver
 * POSBR
 	* construct initial rays
 	* `const` iterators

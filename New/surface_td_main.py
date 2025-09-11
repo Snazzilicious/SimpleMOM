@@ -2,13 +2,14 @@
 import numpy as np
 import sys
 sys.path.insert(0, "/home/ianh/Documents/miscstuff")
+import Inputs
+import Logging
 import MeshUtils
 import EM_Utils
-import GeneralUtils
 
-GeneralUtils.stdout("Beginning Surface Time Domain")
+Logging.stdout("Beginning Surface Time Domain")
 
-cmdline = GeneralUtils.get_standard_arg_parser()
+cmdline = Inputs.get_standard_arg_parser()
 args = cmdline.parse_args()
 
 
@@ -20,7 +21,7 @@ normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
 R = np.linalg.norm( centroids.reshape(centroids.shape+(1,)) - centroids.T.reshape((1,)+centroids.T.shape), axis=1 )
 n_faces = len(faces)
-GeneralUtils.stdout("Mesh Loaded")
+Logging.stdout("Mesh Loaded")
 
 
 

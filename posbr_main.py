@@ -2,14 +2,15 @@
 import numpy as np
 import sys
 sys.path.insert(0, "/home/ianh/Documents/irad_ianh/empy")
+import Inputs
+import Logging
 import MeshUtils
 import EM_Utils
-import GeneralUtils
 import POSBR
 
-GeneralUtils.stdout("Beginning PO-SBR")
+Logging.stdout("Beginning PO-SBR")
 
-cmdline = GeneralUtils.get_standard_arg_parser()
+cmdline = Logging.get_standard_arg_parser()
 cmdline.add_argument('--max_bounce', type=int, help='Maximum number of ray bounces')
 cmdline.add_argument('--ray_spacing', type=float, help='Distance between rays')
 args = cmdline.parse_args()
@@ -22,7 +23,7 @@ normals, v1s,v2s, areas = MeshUtils.local_basis_areas( vertices, faces )
 centroids = MeshUtils.get_centroids( vertices, faces )
 mesh_center = ( np.max(vertices,axis=0) + np.min(vertices,axis=0) )/2
 mesh_diam = np.linalg.norm( np.max(vertices,axis=0) - np.min(vertices,axis=0) )
-GeneralUtils.stdout("Mesh Loaded")
+Logging.stdout("Mesh Loaded")
 
 
 # Excitation params
@@ -55,7 +56,7 @@ for ind,org in enumerate(ray_orgs): # TODO vectorize
 ray_pols = np.tile( H, (n_init_rays,1) )
 
 
-GeneralUtils.stdout("Initial rays constructed")
+Logging.stdout("Initial rays constructed")
 
 
 # Shoot and bounce rays
@@ -111,7 +112,7 @@ J_final = np.vstack(currents)
 J_final_pts = np.vstack(current_pts)
 J_final_wts = np.concatenate(current_wts)
 
-GeneralUtils.stdout("Solution computed")
+Logging.stdout("Solution computed")
 
 
 # compute farfield
@@ -123,5 +124,5 @@ ff = EM_Utils.bistatic_H_field( obs_angs, k, J_final, J_final_pts, J_final_wts )
 ff_x, ff_z = EM_Utils.projected_farfield( obs_angs, ff )
 #plt.plot( np.degrees(obs_x_angs), EM_Utils.to_dBsm(ff_z) )
 
-GeneralUtils.stdout("Farfield computed")
+Logging.stdout("Farfield computed")
 	
