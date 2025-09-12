@@ -3,13 +3,20 @@
 import numpy as np
 import ctypes
 
-nanort_lib = ctypes.CDLL( "RayTracing/nanortlib.so" )
-nanort_lib.get_handle.restype = ctypes.c_void_p
-nanort_lib.intersects_first_interface.restype = None
-nanort_lib.free_handle.restype = None
+
+nanort_lib = None
+try:
+	nanort_lib = ctypes.CDLL( "RayTracing/nanortlib.so" )
+	nanort_lib.get_handle.restype = ctypes.c_void_p
+	nanort_lib.intersects_first_interface.restype = None
+	nanort_lib.free_handle.restype = None
+except OSError:
+	print("Could not import nanortlib, using Trimesh")
+	import trimesh
 
 
-class RayTracer:
+
+class RayTracerNanoRT:
 	def __init__( self, vertices, faces ):
 		
 		n_faces = len(faces)
@@ -34,3 +41,21 @@ class RayTracer:
 	
 	def __del__(self):
 		nanort_lib.free_handle( self.nanort_handle )
+
+
+
+class RayTracerTrimesh:
+	def __init__( self, vertices, faces ):
+		self.trimesh_handle = trimesh.Trimesh( vertices=vertices, faces=faces )
+	
+	def intersects_first( self, ray_orgs, ray_dirs ):
+		return self.trimesh_handle.ray.intersects_first( ray_origins=ray_orgs, ray_directions=ray_dirs )
+
+
+
+if nanort_lib is not None:
+	RayTracer = RayTracerNanoRT
+else:
+	RayTracer = RayTracerTrimesh
+
+
