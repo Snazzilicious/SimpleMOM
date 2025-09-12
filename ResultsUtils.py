@@ -156,18 +156,30 @@ def get_gems_field( filename ):
 	f = open(filename,"r")
 	
 	key_change = { "VV" : "ZZ", "VH" : "ZX", "HV" : "XZ", "HH" : "XX" }
+
+	run_id = 0
+	runs = []
 	
-	results = {}
-	
-	mode = "FIND_START"
+	mode = "FIND_RUN"
 	for line in f:
-		if mode == "FIND_START":
+		if mode == "FIND_RUN":
+			m = re.search( "Run # *([0-9]+)", line )
+			if m is not None:
+				if int(m[1]) != run_id:
+					run_id = int(m[1])
+					runs.append({})
+				mode = "FIND_START"
+		
+		elif mode == "FIND_START":
 			if 'Start RCS Data' in line:
 				mode = "COLLECT"
 		
 		elif mode == "COLLECT":
+			results = runs[-1]
+			
 			if 'End RCS Data' in line:
-				mode = "FIND_START"
+				mode = "FIND_RUN"
+				
 			else:
 				spline = line.split()
 				key = key_change[ spline[2][1]+spline[5][1] ]
@@ -180,19 +192,23 @@ def get_gems_field( filename ):
 				results[ key ][0].append( xzxz_angs )
 				results[ key ][1].append( fld )
 				
-	
-	for k in results:
-		adj_xzxz = np.deg2rad(results[k][0])
-		adj_xzxz[:,1] *= -1.0
-		adj_xzxz[:,1] += np.pi/2
-		adj_xzxz[:,3] *= -1.0
-		adj_xzxz[:,3] += np.pi/2
-		
-		results[k] = ( adj_xzxz, np.array(results[k][1]) )
-		
 	f.close()
 	
-	return results
+	for results in runs:
+		for k in results:
+			adj_xzxz = np.deg2rad(results[k][0])
+			adj_xzxz[:,1] *= -1.0
+			adj_xzxz[:,1] += np.pi/2
+			adj_xzxz[:,3] *= -1.0
+			adj_xzxz[:,3] += np.pi/2
+			
+			results[k] = ( adj_xzxz, np.array(results[k][1]) )
+	
+	
+	if len(runs) == 1:
+		return runs[0]
+	else:
+		return runs
 
 
 from sklearn.neighbors import KNeighborsRegressor
