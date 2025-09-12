@@ -24,14 +24,13 @@
 * Properly organize modules for import
 	* set up `__init__.py`
 * Docstrings
-	* Mesh - done
-	* Results - done
 	* EM
-	* General
 	* IPO
 * PyTests
 	* Mesh readers & writers
 	* Raytracer first hits
+	* farfields
+	* spherical to/from cartesian
 * V&V Tests
 * build system
 	* `g++ -fPIC -shared nanortlib.cpp -o nanortlib.so`
@@ -57,10 +56,8 @@
 	* write observation arrays
 	* read various results files, including Stars and Aurora
 	* Handle multiple frequencies in output files
-* Geometry
-	* spherical to/from cartesian
-* Util
-	* logging
+* Geometry - done
+* Logging - done
 * MOM
 	* Integral kernels
 	* Matrix construction
@@ -70,10 +67,14 @@
 	* plane wave visibility
 	* sparse solver
 	* Iterative solver
+	* IPO initial currents
+		* remove from EM
 * POSBR
 	* construct initial rays
 	* `const` iterators
 	* `const` methods in Ray interfaces
+	* PO currents
+		* remove from EM
 
 
 #### Verification

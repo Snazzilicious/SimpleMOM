@@ -114,7 +114,7 @@ def G( x, y, k ):
 	return -np.exp( -1j*k*R ) / ( 4*np.pi * np.maximum( R, 1e-15 ) )
 
 def gradx_G( x, y, k ):
-	"""Gradient of the Helmholtz Green's function.
+	"""Gradient of the Helmholtz Green's function with respect to x.
 	
 	Arguments
 		x : array-like of floats
@@ -126,25 +126,18 @@ def gradx_G( x, y, k ):
 	
 	Returns
 		gradG : array-like of floats
-			The gradient of the Helmholtz Green's function evaluted at all pairs of points passed in.
+			The gradient of the Helmholtz Green's function w.r.t. x, evaluted at all pairs of points passed in.
 	"""
 	r = x - y
 	R = np.linalg.norm( r, axis=1 )
 	return ( r.T * ( 1j*k*R + 1 ) * np.exp( -1j*k*R ) / ( 4*np.pi * np.maximum( R**3, 1e-15 ) ) ).T
 
 
+def G_ff( p, y, k ):
+	# TODO use this in farfield functions - need v&v tests before updating
+	return np.exp( 1j * k * np.sum( pts * p, axis=1 ) ) / (4*np.pi)
 
-"""Spherical coordinates convenience functions
-"""
 
-def x_angle_z_angle_to_dir( x_angle, z_angle ):
-	return np.column_stack([ np.cos(x_angle)*np.sin(z_angle), np.sin(x_angle)*np.sin(z_angle), np.cos(z_angle) ])
-
-def z_angle_hat( x_angle, z_angle ):
-	return -x_angle_z_angle_to_dir( x_angle+np.pi, (np.pi/2) - z_angle )
-
-def x_angle_hat( x_angle, z_angle ):
-	return x_angle_z_angle_to_dir( x_angle+np.pi/2, np.pi/2 + 0*x_angle )
 
 
 """Working with E field
@@ -201,7 +194,7 @@ def bistatic_H_field( x_z_angles, k, currents, pts, wts ):
 	ffs=np.zeros([len(x_z_angles),3],dtype=np.complex128)
 	
 	for i,(x_angle,z_angle) in enumerate(x_z_angles):
-		obs_dir = x_angle_z_angle_to_dir( x_angle, z_angle ).reshape(-1)
+		obs_dir = x_angle_z_angle_to_dir( x_angle, z_angle )
 		V = np.cross( currents, obs_dir )
 		ffs[i] = ( -1j * k / (4*np.pi) ) * np.sum( wts * np.exp( 1j*k*pts.dot(obs_dir) ) * V.T, axis=1 )
 	
