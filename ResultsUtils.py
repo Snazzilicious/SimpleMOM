@@ -11,7 +11,7 @@ import numpy as np
 from scipy.constants import c
 
 def aurora_field_scale_factor( freq ):
-	"""Aurora normalizes incident wave to 1 V / m, so fields need to be scaled by 1/\lambda
+	"""Aurora normalizes incident wave to 1 V / m, so fields need to be scaled by 1/\\lambda
 	
 	Arguments
 		freq : float
@@ -94,7 +94,7 @@ def get_stars_fld( filename ):
 		f.readline()
 	
 	line = f.readline()
-	m = re.findall( "Re\[([TP]{2})\]", line )
+	m = re.findall( "Re\\[([TP]{2})\\]", line )
 	key_change = { "TT" : "ZZ", "TP" : "ZX", "PT" : "XZ", "PP" : "XX" }
 	keys = [ key_change[i] for i in m ]
 	
@@ -212,7 +212,7 @@ def get_gems_field( filename ):
 
 
 from sklearn.neighbors import KNeighborsRegressor
-from EM_Utils import x_angle_z_angle_to_dir
+from .Geometry import x_angle_z_angle_to_dir
 
 class FieldRegressor :
 	"""Function like object used to evaluate output fields at various incident and scattered angles.

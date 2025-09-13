@@ -1,4 +1,8 @@
 
+import os
+import sys
+
+this_dir = os.path.sep.join( os.path.abspath(__file__).split(os.path.sep)[:-1] )
 
 import numpy as np
 import ctypes
@@ -6,13 +10,12 @@ import ctypes
 
 nanort_lib = None
 try:
-	nanort_lib = ctypes.CDLL( "RayTracing/nanortlib.so" )
+	nanort_lib = ctypes.CDLL( this_dir + os.path.sep + "RayTracing/nanortlib.so" )
 	nanort_lib.get_handle.restype = ctypes.c_void_p
 	nanort_lib.intersects_first_interface.restype = None
 	nanort_lib.free_handle.restype = None
 except OSError:
 	print("Could not import nanortlib, using Trimesh")
-	import trimesh
 
 
 
@@ -43,6 +46,7 @@ class RayTracerNanoRT:
 		nanort_lib.free_handle( self.nanort_handle )
 
 
+import trimesh
 
 class RayTracerTrimesh:
 	def __init__( self, vertices, faces ):

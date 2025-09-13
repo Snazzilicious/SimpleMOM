@@ -2,7 +2,7 @@
 import numpy as np
 
 
-import EM_Utils
+from . import EM_Utils
 
 def initial_current( prop_dir, E_pol, normals, tol=1e-1 ):
 	return EM_Utils.IPO_current_from_E( prop_dir, E_pol, normals, tol )
