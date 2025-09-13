@@ -19,16 +19,11 @@
 	* cmdline > Input file
 	* scenes > contained excitations > global excitations
 * Remove 'Util' from module names
-* C ray trace
-	* build system
-* Properly organize modules for import
-	* set up `__init__.py`
 * Docstrings
 	* EM
 	* IPO
 * PyTests
 	* Mesh readers & writers
-	* Raytracer first hits
 	* farfields
 	* spherical to/from cartesian
 * V&V Tests
@@ -37,6 +32,9 @@
 * Standardized Output format
 	* With multiple frequencies
 * MPI support
+* Get mutual import paths sorted out
+	* nanortlib
+	* pytests
 
 
 #### Modules
@@ -56,7 +54,7 @@
 	* write observation arrays
 	* read various results files, including Stars and Aurora
 	* Handle multiple frequencies in output files
-* Geometry - done
+* Geometry - needs complete docstrings
 * Logging - done
 * MOM
 	* Integral kernels
