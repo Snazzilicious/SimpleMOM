@@ -2,12 +2,11 @@
 import os
 import sys
 
-this_dir = os.path.sep.join( os.path.abspath(__file__).split(os.path.sep)[:-1] )
-
 import numpy as np
 import ctypes
 
 
+this_dir = os.path.sep.join( os.path.abspath(__file__).split(os.path.sep)[:-1] )
 nanort_lib = None
 try:
 	nanort_lib = ctypes.CDLL( this_dir + os.path.sep + "RayTracing/nanortlib.so" )
@@ -61,5 +60,20 @@ if nanort_lib is not None:
 	RayTracer = RayTracerNanoRT
 else:
 	RayTracer = RayTracerTrimesh
+
+
+
+"""Asymptotic current formulas
+"""
+
+from . import EM_Utils
+
+def PO_current_from_H( H_pol, normals ):
+	return 2 * np.cross( normals, H_pol )
+
+def PO_current_from_E( prop_dir, E_pol, normals ):
+	H_pol = EM_Utls.H_from_E( prop_dir, E_pol )
+	return PO_current_from_H( H_pol, normals )
+
 
 

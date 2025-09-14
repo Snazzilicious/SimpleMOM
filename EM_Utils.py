@@ -12,11 +12,11 @@ def omega_from_Hz( freq ):
 	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \omega t}.
 	
 	Arguments
-		freq : numpy array of floats
+		freq : array_like
 			The frequencies in Hertz.
 	
 	Returns
-		omega : numpy array of floats
+		omega : numpy array of floats, same shape as freq.
 			The angular frequencies in radians per second.
 	"""
 	return 2*np.pi*freq
@@ -25,11 +25,11 @@ def k_from_omega( w ):
 	"""Compute the wave number.
 	
 	Arguments
-		omega : numpy array of floats
+		w : array_like
 			The angular frequencies in radians per second.
 	
 	Returns
-		k : numpy array of floats
+		k : numpy array of floats, same shape as w
 			The wave numbers in radians per meter.
 	"""
 	return w/c
@@ -38,11 +38,11 @@ def omega_from_k( k ):
 	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \omega t}.
 	
 	Arguments
-		k : numpy array of floats
+		k : array_like
 			The wave numbers in radians per meter.
 	
 	Returns
-		omega : numpy array of floats
+		omega : numpy array of floats, same shape as k
 			The angular frequencies in radians per second.
 	"""
 	return c*k
@@ -55,14 +55,14 @@ def H_from_E( p,E ):
 	"""Computes the H vector associated with a plane wave with given direction and E vector.
 	
 	Arguments
-		p : ...
-			The propagation direction of the plane wave.
-		E : ...
-			The electric field polarization vector of the plane wave.
+		p : array_like, last dimension must be '3'
+			The propagation direction(s) of the plane wave.
+		E : array_like, last dimension must be '3'
+			The electric field polarization vector(s) of the plane wave.
 	
 	Returns
-		H : ...
-			The magnetic polarization vector of the plane wave.
+		H : array_like, last dimension is '3'
+			The magnetic polarization vector(s) of the plane wave.
 	"""
 	return np.sqrt( eps/mu ) * np.cross( p, E )
 
@@ -70,14 +70,14 @@ def E_from_H( p,H ):
 	"""Computes the E vector associated with a plane wave with given direction and H vector.
 	
 	Arguments
-		p : ...
-			The propagation direction of the plane wave.
-		H : ...
-			The magnetic polarization vector of the plane wave.
+		p : array_like, last dimension must be '3'
+			The propagation direction(s) of the plane wave.
+		H : array_like, last dimension must be '3'
+			The magnetic polarization vector(s) of the plane wave.
 	
 	Returns
-		E : ...
-			The electric field polarization vector of the plane wave.
+		E : array_like, last dimension is '3'
+			The electric field polarization vector(s) of the plane wave.
 	"""
 	return np.sqrt( mu/eps ) * np.cross( H, p )
 
@@ -110,7 +110,7 @@ def G( x, y, k ):
 		G : array-like of floats
 			The value of the Helmholtz Green's function evaluted at all pairs of points passed in.
 	"""
-	R = np.linalg.norm( x-y, axis=1 )
+	R = np.linalg.norm( x-y, axis=-1 )
 	return -np.exp( -1j*k*R ) / ( 4*np.pi * np.maximum( R, 1e-15 ) )
 
 def gradx_G( x, y, k ):
@@ -142,13 +142,6 @@ def G_ff( p, y, k ):
 
 """Working with E field
 """
-def PO_current_from_E( prop_dir, E_pol, normals ):
-	return 2 * np.sqrt( eps/mu ) * np.cross( normals, np.cross( prop_dir, E_pol ) )
-
-def IPO_current_from_E( prop_dir, E_pol, normals, tol=1e-1 ):
-	illuminated = np.sum( normals * prop_dir, axis=1 ) < -tol
-	currents = PO_current_from_E( prop_dir, E_pol, normals )
-	return ( currents.T * illuminated ).T
 
 def E_farfield( obs_dir, k, currents, pts, wts ):
 	w = omega_from_k(k)
@@ -179,15 +172,9 @@ def E_farfield_at_pos( origin, pos, k, currents, pts, wts ):
 	return ffs
 
 
+
 """Working with H field
 """
-def PO_current_from_H( H_pol, normals ):
-	return 2 * np.cross( normals, H_pol )
-
-def IPO_current_from_H( prop_dir, H_pol, normals, tol=1e-1 ):
-	illuminated = np.sum( normals * prop_dir, axis=1 ) < -1e-1
-	currents = PO_current_from_H( H_pol, normals )
-	return ( currents.T * illuminated ).T
 
 def bistatic_H_field( x_z_angles, k, currents, pts, wts ):
 	

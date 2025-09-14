@@ -21,6 +21,7 @@
 * Remove 'Util' from module names
 * Docstrings
 	* EM
+	* POSBR
 	* IPO
 * PyTests
 	* Mesh readers & writers
@@ -50,6 +51,7 @@
 	* get farfield
 	* plane waves
 	* spherical waves
+	* doc strings not all complete
 * Results
 	* write observation arrays
 	* read various results files, including Stars and Aurora

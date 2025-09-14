@@ -2,13 +2,24 @@
 import numpy as np
 
 
-from . import EM_Utils
-
-def initial_current( prop_dir, E_pol, normals, tol=1e-1 ):
-	return EM_Utils.IPO_current_from_E( prop_dir, E_pol, normals, tol )
+from . import POSBR
 
 def is_illuminated_pw( prop_dir, normals, tol=1e-1 ):
 	return np.sum( normals * prop_dir, axis=1 ) <= -tol
+
+
+def IPO_current_from_H( prop_dir, H_pol, normals, tol=1e-1 ):
+	illuminated = is_illuminated_pw( prop_dir, normals, tol )
+	currents = POSBR.PO_current_from_H( H_pol, normals )
+	return ( currents.T * illuminated ).T
+
+
+def IPO_current_from_E( prop_dir, E_pol, normals, tol=1e-1 ):
+	illuminated = is_illuminated_pw( prop_dir, normals, tol )
+	currents = POSBR.PO_current_from_E( prop_dir, E_pol, normals )
+	return ( currents.T * illuminated ).T
+
+
 
 
 """ Make cluster tree """

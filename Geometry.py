@@ -30,8 +30,7 @@ def cartesian_to_spherical( x, y, z ):
 	
 	x_angle = np.arctan2( y, x )
 	
-	z_angle = np.arccos( z / (r+1e-12) )
-	z_angle[r < 1e-12] = 0.0
+	z_angle = np.arccos( z / np.maximum( r, 1e-16 ) )
 	
 	return r, x_angle, z_angle
 
