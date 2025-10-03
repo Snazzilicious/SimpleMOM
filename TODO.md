@@ -33,6 +33,8 @@
 * Standardized Output format
 	* With multiple frequencies
 * MPI support
+	* Distributed Objects and RPCs
+		* Pyro and Ray
 * Get mutual import paths sorted out
 	* nanortlib
 	* pytests
