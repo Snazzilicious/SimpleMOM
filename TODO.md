@@ -29,7 +29,7 @@
 	* spherical to/from cartesian
 * V&V Tests
 * build system
-	* `g++ -fPIC -shared nanortlib.cpp -o nanortlib.so`
+	* `g -fPIC -shared nanortlib.cpp -o nanortlib.so`
 * Standardized Output format
 	* With multiple frequencies
 * MPI support
@@ -77,6 +77,41 @@
 	* `const` methods in Ray interfaces
 	* PO currents
 		* remove from EM
+* ReWrite Stars
+	* Matrix classes
+		* Dense & Low Rank & Zero
+			* need to be careful about which operators get called
+			* need to map out result type of each binary operation depending on types of inputs
+				* add, mult, matmult
+				* scalar, Dense, LR, Zero, H
+		* Operations
+			* LU factor
+			* Tri solve
+			* GEMM
+				* resulting hierarchy calculator
+			* Transpose?
+			* Make iterative and work with just the leaves
+		* Use sqlite for meta data
+			* ID, nrows, ncols, rank, start_row, start_col
+		* Block matrix
+		* OOC Matrix
+			* replacements for DenseMatrix and LowRankMatrix
+		* Distributed Matrix
+	* Parallelism mechanism
+		* Keep in mind, no branching in algorithms
+		* Note pickling functions & classes just saves the name, not the whole definition
+	* IO mechanism (mainly for OOC matrix)
+		* Assurance of honorance of memory limits
+		* Assume have a PFS e.g. Lustre
+	* Checkpointing system
+		* might be easier if have a list of tasks
+		* Ideally tracks diffs between check points
+		* Ideally transparent, e.g. a decorator
+	* Clustering
+	* Fill
+		* ACA
+			* OOC ACA
+		* Integrals
 
 
 #### Verification
