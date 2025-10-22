@@ -1,24 +1,48 @@
 
 # TODO
+# Constructing hMatrices
+#    Assigning matrix data to Dense and Low rank blocks
 # How to know when pointing to leaf node? extra hMatrix node? add "type" labels? - leaning towards both
 # Set item
 #    need to identify and replace leaf nodes
 #    prevent multiple processes from modifying the same root
 #        most important in subroutines
 #        can maybe insert zeros to separate workloads
-# Add and subtract operators
-#    all combinations
+#    LR should check if has same dataset, maybe
 # Matrix multiply
 #    All combinations
+#        LR+LR should still check for same dataset
+#    rSVD
 # Tri Solves
 
-
+def index_to_limits( ind, n ):
+	if isinstance( ind, slice ):
+		if ind.step is not None:
+			"hMatrices do not support stepped slices."
+		begin = 0 if ind.start is None else ind.start
+		end = n if ind.stop is None else ind.stop
+	elif isinstance( ind, (int,np.integer) ):
+		begin = ind
+		end = ind+1
+	else:
+		"Only integers and slices (`:`) are valid indices."
+	
+	if not -n <= begin < n:
+		f"Start index {begin} is out of bounds for axis with size {n}"
+	if not -n < end <= n:
+		f"End index {end} is out of bounds for axis with size {n}"
+	
+	begin = n-begin if begin < 0 else begin
+	end = n-end if end < 0 else end
+	
+	return begin,end
+	
 def parse_slice_key( key, nrows, ncols ):
-	# TODO validate limits, handle 'None', negative values
-	row_begin = key[0][0]
-	row_end = key[0][1]
-	col_begin = key[1][0]
-	col_end = key[1][1]
+	if len(key) != 2:
+		f"Incorrect number of indices for matrix: {len(key)} were indexed."
+	
+	row_begin, row_end = index_to_limits( key[0], nrows )
+	col_begin, col_end = index_to_limits( key[1], ncols )
 	return row_begin, row_end, col_begin, col_end
 
 
@@ -45,7 +69,7 @@ class hMatrix:
 		# find lowest node in the tree which completely contains the slice
 		node = self
 		fits_in_child = True
-		while fits_in_child:
+		while fits_in_child and node.block_type() == "hMatrix":
 			row_begins = node.row_begins()
 			col_begins = node.col_begins()
 			
@@ -54,7 +78,7 @@ class hMatrix:
 			
 			fits_in_child = row_end <= row_begins[row_block+1] and col_end <= col_begins[col_block+1]
 			
-			if fits_in_child and type(node.blocks[row_block][col_block]) == hMatrix:
+			if fits_in_child :
 				row_begin -= row_begins[row_block]
 				row_end -= row_begins[row_block]
 				col_begin -= col_begins[col_block]
@@ -119,72 +143,41 @@ class hMatrixSlice:
 
 
 
+	
+def create_zero_block( nrows, ncols ):
+	return # TODO
 
-class ZeroMatrix:
-	def __init__( self, nrows, ncols ):
-		self.nrows = nrows
-		self.ncols = ncols
-	
-	def row_begins( self ):
-		return np.array([ 0, self.nrows ])
-	
-	def col_begins( self ):
-		return np.array([ 0, self.ncols ])
-	
-	@property
-	def shape( self ):
-		return ( self.nrows, self.ncols )
+def create_dense_block( nrows, ncols ):
+	return # TODO
+
+def create_low_rank_block( nrows, ncols, rank ):
+	return # TODO
 
 
-class DenseMatrix:
-	def __init__( self, nrows, ncols ):
-		self.dat = None
-		self.nrows = nrows
-		self.ncols = ncols
-	
-	def row_begins( self ):
-		return np.array([ 0, self.nrows ])
-	
-	def col_begins( self ):
-		return np.array([ 0, self.ncols ])
-	
-	@property
-	def shape( self ):
-		return ( self.nrows, self.ncols )
-
-
-class LowRankMatrix:
-	def __init__( self, nrows, ncols ):
-		self.left = None
-		self.right = None
-		self.nrows = nrows
-		self.ncols = ncols
-	
-	def row_begins( self ):
-		return np.array([ 0, self.nrows ])
-	
-	def col_begins( self ):
-		return np.array([ 0, self.ncols ])
-	
-	@property
-	def shape( self ):
-		return ( self.nrows, self.ncols )
-	
-	@property
-	def rank( self ):
-		return left.shape[1]
-	
-	
 
 '''Single Process routines
 '''
 
-def GEMM( alpha, A, B, beta, C ):
+def augment_low_rank( A, new_rank ):
+	tmp = create_low_rank_block( A.shape[0], A.shape[1], new_rank )
+	if A.block_type() == "LowRankMatrix":
+		A_rank = A.rank()
+		tmp.blocks[0][:,:A_rank] = A.blocks[0][:,:]
+		tmp.blocks[1][:A_rank,:] = A.blocks[1][:,:]
+	A[:,:] = tmp[:,:]
+	
+
+def GEMM( alpha, A, B, C ):
+	
+	if alpha == 0:
+		return
 	
 	job_stack = [ (A,B,C) ]
 	while len(job_stack) > 0 :
 	
 		a,b,c = job_stack.pop(0)
+		if a.shape[0] != c.shape[0] or b.shape[1] != c.shape[1] or a.shape[1] != b.shape[0]:
+			f"Incompatible matrix dimensions: {a.shape}, {b.shape}, {c.shape}"
 		
 		type_a = a.block_type()
 		type_b = b.block_type()
@@ -197,21 +190,14 @@ def GEMM( alpha, A, B, beta, C ):
 		elif type_c == "ZeroMatrix" or type_c == "LowRankMatrix" 
 		 and type_a == "LowRankMatrix" ^ type_b == "LowRankMatrix" 
 		 and type_a == "hMatrix" ^ type_b == "hMatrix":
-		 
+		 	# TODO subroutinify
 			# augment C to receive low rank product
 			ab_rank = min( a.rank(), b.rank() ) # XXX don't call rank on hmatrix
-			rank_c = c.rank()
+			c_rank = c.rank()
 			result_rank = ab_rank + c_rank
-			new_left = np.zeros((c.nrows,result_rank))
-			new_right = np.zeros((result_rank,c.ncols))
-			if c_rank > 0 :
-				# TODO Convert c to LowRankMatrix
-				new_left[:,:c.rank] = c.left[:,:]
-				new_right[:c.rank,:] = c.right[:,:]
-			c.left = new_left
-			c.right = new_right
+			augment_low_rank( c, result_rank )
 			
-			# replace operands, with just the bases involved
+			# replace operands, with just the bases involved TODO proper wrapping
 			c_wrapper = hMatrix()
 			if type_a == "LowRankMatrix":
 				c.left[:,c_rank:] = a.left[:,:]
@@ -232,9 +218,8 @@ def GEMM( alpha, A, B, beta, C ):
 			job_stack.insert( 0, (c,"rSVD") ) # TODO handle this
 		
 		# Standard cases
-		all_have_data = a.is_leaf() and b.is_leaf() and c.is_leaf()
-		if all_have_data :
-			c = alpha * a @ b + beta * c
+		if type_a != "hMatrix" and type_b != "hMatrix" and type_c != "hMatrix" :
+			c = alpha * a @ b + c # TODO
 		else:
 			row_begins = np.union1d( a.row_begins(), c.row_begins() )
 			col_begins = np.union1d( b.col_begins(), c.col_begins() )
@@ -259,8 +244,24 @@ def GEMM( alpha, A, B, beta, C ):
 			job_stack[0:0] = new_jobs
 
 
+def Leaf_L_Solve( L, B, diag ):
+	if diag != "N":
+		return
+	if B.block_type() == "ZeroMatrix":
+		return
+	if L.block_type() != "DenseMatrix":
+		f"Cannot solve with nondense block type"
+	
+	if B.block_type() == "DenseMatrix"
+		rhs = B.blocks
+	elif B.block_type() == "LowRankMatrix":
+		rhs = B.blocks[0]
+	
+	M = L.blocks[:,:]
+	rhs[:,:] = np.linalg.solve( L, rhs[:,:] )
+	
 
-def L_Solve( L, B ):
+def L_Solve( L, B, diag="N" ):
 	
 	job_stack = [ ( "L_Solve", L, B ) ]
 	while len(job_stack) > 0 :
@@ -271,9 +272,13 @@ def L_Solve( L, B ):
 			
 			l = job[1]
 			b = job[2]
+			# TODO catch the LowRank-hMatrix case ... maybe it doesn't need to be
+			if b.block_type() == "ZeroMatrix":
+				continue
 			
-			if all_have_data :
-				b = l \ b
+			if l.block_type() != "hMatrix" and b.block_type() != "hMatrix" :
+				
+				b = l \ b # TODO
 			else:
 				diag_begins = np.union1d( l.col_begins(), b.row_begins() )
 				col_begins = b.col_begins()
@@ -298,9 +303,10 @@ def L_Solve( L, B ):
 			a = job[1]
 			b = job[2]
 			c = job[3]
-			GEMM( -1.0, a, b, 1.0, c )
+			GEMM( -1.0, a, b, c )
 
-def U_Solve( U, B ):	
+
+def U_Solve( U, B ): # XXX need right and left solve
 
 def LU_Factor( A ):
 	

@@ -87,11 +87,11 @@
 		* Operations
 			* LU factor
 			* Tri solve
+				* L and U
+				* Left and Right
 			* GEMM
-				* resulting hierarchy calculator
-			* Transpose?
+			* Transpose
 			* ACA fill
-			* Make iterative and work with just the leaves if possible
 		* Use sqlite for meta data
 			* give this a tree-like interface
 			* ID, nrows, ncols, rank, start_row, start_col
@@ -99,6 +99,7 @@
 		* OOC Matrix
 			* replacements for DenseMatrix and LowRankMatrix
 		* Distributed Matrix
+	* Error throwing
 	* Parallelism mechanism
 		* Keep in mind, no branching in algorithms - maybe
 		* Note pickling functions & classes just saves the name, not the whole definition
