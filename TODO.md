@@ -90,16 +90,25 @@
 			* GEMM
 				* resulting hierarchy calculator
 			* Transpose?
-			* Make iterative and work with just the leaves
+			* ACA fill
+			* Make iterative and work with just the leaves if possible
 		* Use sqlite for meta data
+			* give this a tree-like interface
 			* ID, nrows, ncols, rank, start_row, start_col
 		* Block matrix
 		* OOC Matrix
 			* replacements for DenseMatrix and LowRankMatrix
 		* Distributed Matrix
 	* Parallelism mechanism
-		* Keep in mind, no branching in algorithms
+		* Keep in mind, no branching in algorithms - maybe
 		* Note pickling functions & classes just saves the name, not the whole definition
+		* Matmul: parallelize over entries in C
+			* Note: Result isn't guaranteed to fit in original allocation
+			* Note: General add to LR matrix is the hang up
+				* Particularly when is a subdivision of a LR matrix 
+		* Add: parallelize over entries in C - may not need this
+		* LU Factor
+		* LU Solve
 	* IO mechanism (mainly for OOC matrix)
 		* Assurance of honorance of memory limits
 		* Assume have a PFS e.g. Lustre
