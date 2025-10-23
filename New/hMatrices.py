@@ -5,9 +5,6 @@
 # How to know when pointing to leaf node? extra hMatrix node? add "type" labels? - leaning towards both
 # Set item
 #    need to identify and replace leaf nodes
-#    prevent multiple processes from modifying the same root
-#        most important in subroutines
-#        can maybe insert zeros to separate workloads
 #    LR should check if has same dataset, maybe
 # Matrix multiply
 #    All combinations
