@@ -1,5 +1,6 @@
 
 // TODO
+// Design the leaves
 // Constructing hMatrices
 //    Assigning matrix data to Dense and Low rank blocks
 //    Shared pointers to nodes + shared_from_this
@@ -15,6 +16,7 @@
 // Tri Solves
 //    should do the wrapper thing whenever encountering a LR matrix, then only solve when both dense
 // Multithreaded
+// OOC
 // Distributed Memory
 // Distributed Disk
 
@@ -195,5 +197,28 @@ void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixI
 			}
 		}
 	}
+}
+
+
+
+template<Scalar,hMatrixInterface>
+void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixInterface C, std::size_t n_threads ){
+
+	// Split C up as fine as possible/reasonable, ideally along partition lines
+
+	// execute in parallel
+	while( !job_stack.empty() ){
+		
+		GEMM_job_descriptor job;
+		{
+			lock_guard;
+			if( !job_stack.empty() ){
+				job = job_stack.front();
+				job_stack.pop_front();
+			}
+		}
+		hMatrixGEMM( alpha, job.a, job.b, job.c );
+	}
 
 }
+
