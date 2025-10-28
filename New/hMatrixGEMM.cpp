@@ -15,6 +15,7 @@
 //    All combinations
 //        LR+LR should still check for same dataset
 //    rSVD
+///   Force truncation of insert into Low Rank blocks
 // Multithreaded
 // OOC
 //    slices must stop at the in-core block level i.e. a loadable hMatrix is the leaf data of an OOC hMatrix
@@ -176,31 +177,30 @@ void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixI
 			auto type_c = c.block_type();
 			
 			if( type_a != ZeroMatrix && type_b != ZeroMatrix ){
-			
-				// Special case of LowRankMatrix times hMatrix assigned to LowRankMatrix or ZeroMatrix
-				if( type_c == ZeroMatrix || type_c == LowRankMatrix ){
-					if( ( type_a == LowRankMatrix && type_b == hMatrix ) || ( type_a == hMatrix && type_b == LowRankMatrix ) ){
-						GEMM_job_descriptor new_gemm = queue_LR_H_LR_GEMM( a, b, c );
-						GEMM_job_descriptor new_rsvd = GEMM_job_descriptor( RSVD, c );
-						// Push new jobs onto stack, right behind 'front'
-						auto insert_pos = job_stack.begin();
-						insert_pos++;
-						insert_pos = job_stack.insert( insert_pos, new_rsvd );
-						insert_pos = job_stack.insert( insert_pos, new_gemm );
-					}
-				}
-				// Base case
-				else if( type_a != hMatrix && type_b != hMatrix && type_c != hMatrix ){
-					Leaf_GEMM( alpha, a, b, c );
-				}
-				// General case
-				else {
-					std::list<GEMM_job_descriptor> new_jobs = queue_H_GEMM( a, b, c );
-					// Push new jobs onto stack, right behind 'front'
-					auto insert_pos = job_stack.begin();
-					insert_pos++;
-					job_stack.insert( insert_pos, new_jobs.begin(), new_jobs.end() );
-				}
+				continue;
+			}
+			// Special case of LowRankMatrix times non-LowRankMatrix assigned to LowRankMatrix or ZeroMatrix
+			else if( ( type_c == ZeroMatrix || type_c == LowRankMatrix ) && (( type_a == LowRankMatrix ) != ( type_b == LowRankMatrix )) ){
+				
+				GEMM_job_descriptor new_gemm = queue_LR_H_LR_GEMM( a, b, c );
+				GEMM_job_descriptor new_rsvd = GEMM_job_descriptor( RSVD, c );
+				// Push new jobs onto stack, right behind 'front'
+				auto insert_pos = job_stack.begin();
+				insert_pos++;
+				insert_pos = job_stack.insert( insert_pos, new_rsvd );
+				insert_pos = job_stack.insert( insert_pos, new_gemm );
+			}
+			// Base case
+			else if( type_a != hMatrix && type_b != hMatrix && type_c != hMatrix ){
+				Leaf_GEMM( alpha, a, b, c );
+			}
+			// General case
+			else {
+				std::list<GEMM_job_descriptor> new_jobs = queue_H_GEMM( a, b, c );
+				// Push new jobs onto stack, right behind 'front'
+				auto insert_pos = job_stack.begin();
+				insert_pos++;
+				job_stack.insert( insert_pos, new_jobs.begin(), new_jobs.end() );
 			}
 		}
 	}
@@ -275,64 +275,60 @@ void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixI
 }
 
 
-template<Scalar,OOChMatrixInterface>
-void hMatrixGEMM( Scalar alpha, OOChMatrixInterface A, OOChMatrixInterface B, OOChMatrixInterface C, std::size_t n_threads ){
-	
-	std::list<GEMM_job_descriptor> job_stack;
-	job_stack.emplace_back( GEMM, A, B, C );
-	
-	// find loadable blocks
-	for( ; !job_stack.empty(); job_stack.pop_front() ){
-		
-		auto job = job_stack.front();
-		
-		auto a = job.a;
-		auto b = job.b;
-		auto c = job.c;
-		
-		auto type_a = a.block_type();
-		auto type_b = b.block_type();
-		auto type_c = c.block_type();
-		
-		if( type_a != ZeroMatrix && type_b != ZeroMatrix ){
-			// Base case
-			if( type_a == IC_Block && type_b == IC_Block && type_c == IC_Block ){
-				
-				// load blocks - load so that a,b free data when they go out of scope
-				auto incore_a = a.load();
-				auto incore_b = b.load();
-				auto incore_c = c.load();
-				
-				// do in-core GEMM
-				hMatrixGEMM( alpha, incore_a, incore_b, incore_c, n_threads );
-				
-				// deallocate a,b / let go out of scope
-				// TODO write c - c[:,:] = incore_c ???
-			}
-			// General case
-			else {
-				std::list<GEMM_job_descriptor> new_jobs = queue_H_GEMM( a, b, c );
-				// Push new jobs onto stack, right behind 'front'
-				auto insert_pos = job_stack.begin();
-				insert_pos++;
-				job_stack.insert( insert_pos, new_jobs.begin(), new_jobs.end() );
-			}
-		}
-	}
-}
-
-
 
 template<Scalar,OOChMatrixInterface>
 void hMatrixGEMM( Scalar alpha, OOChMatrixInterface A, OOChMatrixInterface B, OOChMatrixInterface C, std::size_t n_threads, MPI_comm Work_Comm ){
 
-	// Chunk up C to find independent work
+	std::vector<std::size_t> c_row_begins = C.get_row_begins();
+	std::vector<std::size_t> c_col_begins = C.get_col_begins();
+	std::size_t n_c_row_blocks = c_row_begins.size()-1;
+	std::size_t n_c_col_blocks = c_col_begins.size()-1;
 	
-	// communicate tasking to each rank
-	MPI_scatter( ... );
+	auto beg_end = distribute_round_robin( 0, n_c_row_blocks*n_c_col_blocks, n_procs, proc_id );
+	for( auto c_it=beg_end.first, c_it != beg_end.second; ++c_it ){
+		std::size_t c_row = (*c_it) % n_c_row_blocks;
+		std::size_t c_col = (*c_it) / n_c_row_blocks;
+		
+		std::size_t c_row_begin = c_row_begins[c_row];
+		std::size_t c_row_end = c_row_begins[c_row+1];
+		std::size_t c_col_begin = c_col_begins[c_col];
+		std::size_t c_col_end = c_col_begins[c_col+1];
+		
+		auto a = A.slice( c_row_begin, c_row_end, 0, A.ncols() );
+		auto b = B.slice( 0, B.nrows(), c_col_begin, c_col_end );
+		auto c = C.slice( c_row_begin, c_row_end, c_col_begin, c_col_end );
+		
+		// TODO load c
+		incore_c = c.load( Work_Comm );
+		
+		// Get unions of partition points
+		std::vector<std::size_t> row_begins = a.get_row_begins();
+		std::vector<std::size_t> col_begins = b.get_col_begins();
+		std::vector<std::size_t> inr_begins = get_partition_union( a.get_col_begins(), b.get_row_begins() );
 	
-	// do OOC GEMM
-	hMatrixGEMM( alpha, a, b, c, n_threads );
+		for( auto rb_it=row_begins.begin(); rb_it !=row_begins.end()-1; ++rb_it ){
+			for( auto cb_it=col_begins.begin(); cb_it !=col_begins.end()-1; ++cb_it ){
+				for( auto ib_it=inr_begins.begin(); ib_it !=inr_begins.end()-1; ++ib_it ){
+		
+					std::size_t row_begin = *rb_it;
+					std::size_t row_end = *(rb_it+1);
+					std::size_t col_begin = *cb_it;
+					std::size_t col_end = *(cb_it+1);
+					std::size_t inr_begin = *ib_it;
+					std::size_t inr_end = *(ib_it+1);
+					
+					// collectively load operands
+					incore_a = a.slice( row_begin, row_end, inr_begin, inr_end ).load( Work_Comm );
+					incore_b = b.slice( inr_begin, inr_end, col_begin, col_end ).load( Work_Comm );
+		
+					hMatrixGEMM( alpha, incore_a, incore_b, incore_c, n_threads );
+				}
+			}
+		}
+		
+	
+		// TODO when C is done, write out. c[:,:] = incore_c ???
+	}
 }
 
 
