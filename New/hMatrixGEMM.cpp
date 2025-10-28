@@ -15,8 +15,6 @@
 //    All combinations
 //        LR+LR should still check for same dataset
 //    rSVD
-// Tri Solves
-//    should do the wrapper thing whenever encountering a LR matrix, then only solve when both dense
 // Multithreaded
 // OOC
 //    slices must stop at the in-core block level i.e. a loadable hMatrix is the leaf data of an OOC hMatrix
@@ -118,8 +116,8 @@ std::list<GEMM_job_descriptor> queue_H_GEMM( hMatrixInterface A, hMatrixInterfac
 	
 	// Symbolically matmul all sub blocks
 	std::list<GEMM_job_descriptor> job_stack;
-	for( auto rb_it=row_begins.begin(); rb_it !=row_begins.end()-1; ++rb_it )
-		for( auto cb_it=col_begins.begin(); cb_it !=col_begins.end()-1; ++cb_it )
+	for( auto rb_it=row_begins.begin(); rb_it !=row_begins.end()-1; ++rb_it ){
+		for( auto cb_it=col_begins.begin(); cb_it !=col_begins.end()-1; ++cb_it ){
 			for( auto ib_it=inr_begins.begin(); ib_it !=inr_begins.end()-1; ++ib_it ){
 	
 				std::size_t row_begin = *rb_it;
