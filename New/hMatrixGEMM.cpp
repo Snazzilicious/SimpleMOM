@@ -10,6 +10,7 @@
 // Set item
 //    need to identify and replace leaf nodes
 //    LR should check if has same dataset, maybe
+//    Hierarchy will not change in any routine
 // subroutine error checking, debug and release, and early exiting
 // Matrix multiply
 //    All combinations
@@ -41,7 +42,7 @@ struct GEMM_job_descriptor{
 	GEMM_job_descriptor( t, a, b, c );
 }
 
-GEMM_job_descriptor queue_LR_H_LR_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
+GEMM_job_descriptor queue_LR_NLR_LR_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
 	// augment C to receive result
 	std::size_t old_rank = C.rank();
 	std::size_t new_rank = old_rank;
@@ -88,9 +89,6 @@ void Leaf_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
 	auto type_b = b.block_type();
 	auto type_c = c.block_type();
 	
-	if( type_a == DenseMatrix && type_b == DenseMatrix )
-		// convert C to Dense
-	
 	if( type_c == DenseMatrix ){
 		// going straight in
 	
@@ -131,11 +129,6 @@ std::list<GEMM_job_descriptor> queue_H_GEMM( hMatrixInterface A, hMatrixInterfac
 				auto a = A.slice( row_begin, row_end, inr_begin, inr_end );
 				auto b = B.slice( inr_begin, inr_end, col_begin, col_end );
 				auto c = C.slice( row_begin, row_end, col_begin, col_end );
-				// Partition C if needed to avoid slice invalidation by future operations
-				if( c.root == C.root ){
-					C.assign( row_begin, row_end, col_begin, col_end, c );
-					c = C.slice( row_begin, row_end, col_begin, col_end );
-				}
 			
 				job_stack.emplace_back( GEMM, a, b, c );
 			}
@@ -182,7 +175,7 @@ void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixI
 			// Special case of LowRankMatrix times non-LowRankMatrix assigned to LowRankMatrix or ZeroMatrix
 			else if( ( type_c == ZeroMatrix || type_c == LowRankMatrix ) && (( type_a == LowRankMatrix ) != ( type_b == LowRankMatrix )) ){
 				
-				GEMM_job_descriptor new_gemm = queue_LR_H_LR_GEMM( a, b, c );
+				GEMM_job_descriptor new_gemm = queue_LR_NLR_LR_GEMM( a, b, c );
 				GEMM_job_descriptor new_rsvd = GEMM_job_descriptor( RSVD, c );
 				// Push new jobs onto stack, right behind 'front'
 				auto insert_pos = job_stack.begin();
@@ -326,7 +319,6 @@ void hMatrixGEMM( Scalar alpha, OOChMatrixInterface A, OOChMatrixInterface B, OO
 			}
 		}
 		
-	
 		// TODO when C is done, write out. c[:,:] = incore_c ???
 	}
 }
