@@ -1,32 +1,19 @@
 
 // TODO
-// Design the leaves
-// Constructing hMatrices
-//    Assigning matrix data to Dense and Low rank blocks
-//    Shared pointers to nodes + shared_from_this
-//    How to create on the stack?
-// How to know when pointing to leaf node? extra hMatrix node? add "type" labels? - leaning towards both
-//    types for OOC and distributed matrices need to all be mutually disjoint, or need to be different node types
-// Set item
-//    need to identify and replace leaf nodes
-//    LR should check if has same dataset, maybe
-//    Hierarchy will not change in any routine
+// Hierarchy must not change in any routine
 // subroutine error checking, debug and release, and early exiting
 // Matrix multiply
 //    All combinations
 //        LR+LR should still check for same dataset
 //    rSVD
 ///   Force truncation of insert into Low Rank blocks
-// Multithreaded
-// OOC
+// Distributed Memory
+//    how to "send" slices
 //    slices must stop at the in-core block level i.e. a loadable hMatrix is the leaf data of an OOC hMatrix
 //        loading a slice needs to be aware that its not pointing to the whole matrix
 //    Ref counting on disk?
-// Distributed Memory
-//    how to "send" slices
 // Distributed Disk
 // API organization
-// Need a generic tree traversal and node retrieval algorithm - see BGL
 
 
 void augment_low_rank( hMatrixInterface M, std::size_t new_rank ){
@@ -36,21 +23,21 @@ void augment_low_rank( hMatrixInterface M, std::size_t new_rank ){
 void LR_to_LR_GEMM( alpha, A, B, C ){
 	hMatrix new_left_basis, new_right_basis, new_operand;
 	
-	if( A.block_type() == LowRankMatrix ){
+	if( A.block_type() == hMatrix::BlockType::LowRank ){
 		new_left_basis.dense_mat = A.left;
 		new_right_basis.dense_mat = zeros;
 		new_operand = A.right;
-		hMatrixGEMM( new_operand, B, new_right_basis ); // will not recall this function
+		HHL_gemm( new_operand, B, new_right_basis ); // will not recall this function
 	}
 	else {
 		new_left_basis.dense_mat = zeros;
 		new_right_basis.dense_mat = B.right;
 		new_operand = B.left;
-		hMatrixGEMM( A, new_operand, new_left_basis ); // will not recall this function
+		HHL_gemm( A, new_operand, new_left_basis ); // will not recall this function
 	}
 	
-	// TODO copy new_left_basis.mat into c.left
-	// TODO copy new_right_basis.mat into c.right
+	// TODO copy new_left_basis.mat into c.left, unless is the same
+	// TODO copy new_right_basis.mat into c.right, unless is the same
 	rSVD( C );
 }
 
@@ -68,7 +55,7 @@ void Leaf_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
 	else {
 		// augment C to receive result
 	
-		
+		rSVD( c );
 	}
 }
 
@@ -136,11 +123,12 @@ void HHL_gemm( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixInte
 		auto type_b = b.block_type();
 		auto type_c = c.block_type();
 		
-		if( type_a != ZeroMatrix && type_b != ZeroMatrix ){
+		if( type_a != hMatrix::BlockType::Zero && type_b != hMatrix::BlockType::Zero ){
 			continue;
 		}
-		// Special case of LowRankMatrix times non-LowRankMatrix assigned to LowRankMatrix or ZeroMatrix
-		else if( ( type_c == ZeroMatrix || type_c == LowRankMatrix ) && (( type_a == LowRankMatrix ) != ( type_b == LowRankMatrix )) ){
+		// Special case of LowRank times non-LowRank assigned to LowRank or Zero
+		else if( ( type_c == hMatrix::BlockType::Zero || type_c == hMatrix::BlockType::LowRank ) 
+		     && (( type_a == hMatrix::BlockType::LowRank ) != ( type_b == hMatrix::BlockType::LowRank )) ){
 			LR_to_LR_GEMM( alpha, a, b, c );
 		}
 		// Base case
@@ -191,6 +179,13 @@ void hMatrixGEMM( Scalar alpha, OOChMatrixInterface A, OOChMatrixInterface B, OO
 	// For each icb
 	//    get slices of A,B to multiply
 	//    call gemm leaf c
+	
+	//load C
+	for( std::size_t step=0; step < n_steps; ++step ){
+		
+	}
+	// write C
+	
 }
 
 
