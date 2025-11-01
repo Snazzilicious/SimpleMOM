@@ -1,8 +1,10 @@
 
 // TODO
 // Tri Solves
-//    need ?laswp at some level
-//        Probably needs to be at the hMatrix level
+//    need ?laswp
+//        add this to Leaf_TRSM, plus passing the ipiv vector some how
+// MPI OOC
+// Dist Disk
 
 
 void Leaf_TRSM( char side, char uplo, char diag, hMatrixInterface A, hMatrixInterface B ){
@@ -17,170 +19,75 @@ void Leaf_TRSM( char side, char uplo, char diag, hMatrixInterface A, hMatrixInte
 }
 
 
-std::list<TRSM_job_descriptor> queue_H_TRSM( char side, char uplo, A, B ){
+void LUH_trsm( char side, char uplo, char diag, hMatrixInterface A, hMatrixInterface B ){
+	// Get B leaves
+	std::vector<typename hMatrixInterface::TreeIterator> B_leaves = B.get_leaves();
+	
+	if( side == "L" ){
+		// get column partitions
+		std::set<std::size_t> unique_col_begins = {B.ncols()};
+		for( const auto& it : B_leaves )
+			unique_col_begins.insert( it.col_begin );
+		std::vector<std::size_t> col_begins( unique_col_begins.size() );
+		std::copy( unique_col_begins.begin(), unique_col_begins.end(), col_begins.begin() );
+		
+		// Solve on each partition
+		for( auto cb_it=col_begins.begin(); cb_it != col_begins.end()-1; ++cb_it ){
 
-	std::list<TRSM_job_descriptor> job_stack;
-	if( side == "L" && uplo == "L" ){
-	
-		std::vector<std::size_t> diag_begins = B.get_row_begins();
-		std::vector<std::size_t> rhs_begins = B.get_col_begins();
+			std::size_t col_begin = *cb_it;
+			std::size_t col_end = *(cb_it+1);
 			
-		for( auto db_it=diag_begins.begin(); db_it != diag_begins.end()-1; ++db_it ){
+			auto b = B.slice( 0, B.nrows(), col_begin, col_end );
 			
-			std::size_t diag_begin = *db_it;
-			std::size_t diag_end = *(db_it+1);
-			
-			for( auto rb_it=rhs_begins.begin(); cb_it != rhs_begins.end()-1; ++cb_it ){
-				
-				std::size_t rhs_begin = *rb_it;
-				std::size_t rhs_end = *(rb_it+1);
-				
-				auto a = A.slice( diag_begin, diag_end, diag_begin, diag_end );
-				auto b = B.slice( diag_begin, diag_end, rhs_begin, rhs_end );
-				
-				job_stack.emplace_back( TRSM, a, b );
+			if( b.block_type() == hMatrix::BlockType::LowRank ){
+				hMatrix b_wrapper;
+				b_wrapper.dense = b.
+				Leaf_TRSM( side, uplo, diag, A, b );
+			}
+			else if( b.block_type() == hMatrix::BlockType::Dense ){
+				Leaf_TRSM( side, uplo, diag, A, b );
 			}
 			
-			auto a = A.slice( diag_end, diag_begins.back(), diag_begin, diag_end );
-			auto b = B.slice( diag_begin, diag_end, 0, rhs_begins.back() );
-			auto c = B.slice( diag_end, diag_begins.back(), 0, rhs_begins.back() );
-			
-			job_stack.emplace_back( GEMM, a, b, c );
-		}
-	}
-	else if( side == "R" && uplo == "U" ) {
-	
-		std::vector<std::size_t> diag_begins = B.get_col_begins();
-		std::vector<std::size_t> rhs_begins = B.get_row_begins();
-			
-		for( auto db_it=diag_begins.begin(); db_it != diag_begins.end()-1; ++db_it ){
-			
-			std::size_t diag_begin = *db_it;
-			std::size_t diag_end = *(db_it+1);
-			
-			for( auto rb_it=rhs_begins.begin(); cb_it != rhs_begins.end()-1; ++cb_it ){
-				
-				std::size_t rhs_begin = *rb_it;
-				std::size_t rhs_end = *(rb_it+1);
-				
-				auto a = A.slice( diag_begin, diag_end, diag_begin, diag_end );
-				auto b = B.slice( rhs_begin, rhs_end, diag_begin, diag_end );
-				
-				job_stack.emplace_back( TRSM, a, b );
-			}
-			
-			auto a = B.slice( 0, rhs_begins.back(), diag_begin, diag_end );
-			auto b = A.slice( diag_begin, diag_end, diag_end, diag_begins.back() );
-			auto c = B.slice( 0, rhs_begins.back(), diag_end, diag_begins.back() );
-			
-			job_stack.emplace_back( GEMM, a, b, c );
-		}
-	}
-	else if( side == "L" && uplo == "U" ){
-		
-		std::vector<std::size_t> diag_begins = B.get_row_begins();
-		std::vector<std::size_t> rhs_begins = B.get_col_begins();
-		
-		for( auto db_it=diag_begins.end()-1; db_it != diag_begins.begin(); --db_it ){
-			
-			std::size_t diag_begin = *(db_it-1);
-			std::size_t diag_end = *db_it;
-			
-			auto a = A.slice( diag_begin, diag_end, diag_end, diag_begins.back() );
-			auto b = B.slice( diag_end, diag_begins.back(), 0, rhs_begins.back() );
-			auto c = B.slice( diag_begin, diag_end, 0, rhs_begins.back() );
-			
-			job_stack.emplace_back( GEMM, a, b, c );
-			
-			for( auto rb_it=rhs_begins.begin(); cb_it != rhs_begins.end()-1; ++cb_it ){
-				
-				std::size_t rhs_begin = *rb_it;
-				std::size_t rhs_end = *(rb_it+1);
-				
-				auto a = A.slice( diag_begin, diag_end, diag_begin, diag_end );
-				auto b = B.slice( diag_begin, diag_end, rhs_begin, rhs_end );
-				
-				job_stack.emplace_back( TRSM, a, b );
-			}
-		}
-	}
-	else if( side == "R" && uplo == "L" ){
-	
-		std::vector<std::size_t> diag_begins = B.get_col_begins();
-		std::vector<std::size_t> rhs_begins = B.get_row_begins();
-		
-		for( auto db_it=diag_begins.end()-1; db_it != diag_begins.begin(); --db_it ){
-			
-			std::size_t diag_begin = *(db_it-1);
-			std::size_t diag_end = *db_it;
-			
-			auto a = B.slice( 0, rhs_begins.back(), diag_end, diag_begins.back() );
-			auto b = A.slice( diag_end, diag_begins.back(), diag_begin, diag_end );
-			auto c = B.slice( 0, rhs_begins.back(), diag_begin, diag_end );
-			
-			job_stack.emplace_back( GEMM, a, b, c );
-			
-			for( auto rb_it=rhs_begins.begin(); cb_it != rhs_begins.end()-1; ++cb_it ){
-				
-				std::size_t rhs_begin = *rb_it;
-				std::size_t rhs_end = *(rb_it+1);
-				
-				auto a = A.slice( diag_begin, diag_end, diag_begin, diag_end );
-				auto b = B.slice( rhs_begin, rhs_end, diag_begin, diag_end );
-				
-				job_stack.emplace_back( TRSM, a, b );
+			else if( b.block_type() == hMatrix::BlockType::H ){
+				hMatrix dense_b = b.todense();
+				Leaf_TRSM( side, uplo, diag, A, dense_b );
+				b.assign( dense_b.slice() );
 			}
 		}
 	}
 	else {
-		throw std::logic_error( "Invalid side and/or uplo" );
-	}
+		// get row partitions
+		std::set<std::size_t> unique_row_begins = {B.nrows()};
+		for( const auto& it : B_leaves )
+			unique_row_begins.insert( it.row_begin );
+		std::vector<std::size_t> row_begins( unique_row_begins.size() );
+		std::copy( unique_row_begins.begin(), unique_row_begins.end(), row_begins.begin() );
+		
+		// Solve on each partition
+		for( auto rb_it=row_begins.begin(); rb_it != row_begins.end()-1; ++rb_it ){
 	
-	return job_stack;
-}
-
-
-void LUH_trsm( char side, char uplo, char diag, hMatrixInterface A, hMatrixInterface B ){
-
-	std::list<TRSM_job_descriptor> job_stack;
-	job_stack.emplace_back( TRSM, A, B );
-
-	for( ; !job_stack.empty(); job_stack.pop_front() ){
-
-		auto job = job_stack.front();
-
-		if( job.type == GEMM ){
-			// TODO wrap a (or b) in dense_mat - OR give iterator the logic to present as dense if pointing to of diag of LU block
-			hMatrixGEMM( -1.0, job.a, job.b, job.c );
-		}
-		else /* job_type == TRSM */ {
-
-			auto a = job.a;
-			auto b = job.b;
-
-			auto type_b = b.block_type();
-
-			if( type_b == DenseMatrix ){
-				Leaf_TRSM( side, uplo, diag, a, b );
-			}
-			else if ( type_b == LowRankMatrix ){
-				// TODO wrap appropriate basis
+			std::size_t row_begin = *rb_it;
+			std::size_t row_end = *(rb_it+1);
+			
+			auto b = B.slice( row_begin, row_end, 0, B.ncols() );
+			
+			if( b.block_type() == hMatrix::BlockType::LowRank ){
 				hMatrix b_wrapper;
-				if( side == "L" ) b_wrapper.mat = b.left;
-				else b_wrapper.mat = b.right;
-				Leaf_TRSM( side, uplo, diag, a, b_wrapper );
+				b_wrapper.dense = b.
+				Leaf_TRSM( side, uplo, diag, A, b );
 			}
-			else {
-				std::list<TRSM_job_descriptor> new_jobs = queue_H_TRSM( side, uplo, a, b, s );
-				// Push new jobs onto stack right behind 'front'
-				auto insert_pos = job_stack.begin();
-				++insert_pos;
-				job_stack.insert( insert_pos, new_jobs.begin(), new_jobs.end() );
+			else if( b.block_type() == hMatrix::BlockType::Dense ){
+				Leaf_TRSM( side, uplo, diag, A, b );
+			}
+			
+			else if( b.block_type() == hMatrix::BlockType::H ){
+				hMatrix dense_b = b.todense();
+				Leaf_TRSM( side, uplo, diag, A, dense_b );
+				b.assign( dense_b.slice() );
 			}
 		}
 	}
 }
-
 
 
 void hMatrixTRSM( char side, char uplo, char diag, hMatrixInterface A, hMatrixInterface B ){
