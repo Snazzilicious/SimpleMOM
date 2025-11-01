@@ -68,7 +68,7 @@ class hMatrix::Node {
 		}
 };
 
-void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end std::size_t nocls, std::size_t nrows ){
+void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end std::size_t ncols, std::size_t nrows ){
 	if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
 		throw std::runtime_error("Invalid slice range.");
 }

@@ -1,6 +1,65 @@
 
 
+
+struct GETRF_job_descriptor {
+	enum JobType { GETRF, TRSM_GEMM } type;
+	IntIt p;
+	hMatrixInterface a,b,c,d;
+	GETRF_job_descriptor( IntIt piv, hMatrixInterface A );
+	GETRF_job_descriptor( IntIt piv, hMatrixInterface A, hMatrixInterface B, hMatrixInterface C, hMatrixInterface D );
+}
+
+
 template<IntIt,hMatrixInterface>
 void hMatrixGETRF( IntIt piv, hMatrixInterface A ){
 
+	std::list<GETRF_job_descriptor> job_stack;
+	job_stack.emplace_back( GETRF, piv, A );
+	
+	for( ; !job_stack.empty(); job_stack.pop_front() ){
+
+		auto job = job_stack.front();
+		
+		auto p = job.p;
+		auto a = job.a;
+		auto b = job.b;
+		auto c = job.c;
+		auto d = job.d;
+		
+		if( job.type == TRSM_GEMM ){
+			hMatrixLASWP( "L", p, b );
+			hMatrixTRSM( "L", "L", "U", a, b );
+			hMatrixTRSM( "R", "U", "N", a, c );
+			hMatrixGEMM( -1.0, c, b, d );
+		}
+		else /* job.type == GETRF */ {
+			if( a.block_type() == hMatrix::BlockType::Dense ){
+				Leaf_GETRF( p, a );
+			}
+			else {
+				std::vector<std::size_t> diag_begins = a.row_begins();
+				
+				for( auto db_it=diag_begins.begin(); db_it != diag_begins.end()-1; ++db_it ){
+					
+					std::size_t diag_begin = *db_it;
+					std::size_t diag_end = *(db_it+1);
+					
+					auto new_p = p + diag_begin;
+					auto new_a = a.slice( diag_begin, diag_end, diag_begin, diag_end );
+					auto new_b = a.slice( diag_begin, diag_end, diag_end, a.ncols() );
+					auto new_c = a.slice( diag_end, a.nrows(), diag_begin, diag_end );
+					auto new_d = a.slice( diag_end, a.nrows(), diag_end, a.ncols() );
+					
+					GETRF_job_descriptor new_getrf( GETRF, new_p, new_a );
+					GETRF_job_descriptor new_trsm_gemm( TRSM_GEMM, new_p, new_a, new_b, new_c, new_d );
+					
+					// Push new jobs onto stack right behind 'front'
+					auto insert_pos = job_stack.begin();
+					++insert_pos;
+					insert_pos = job_stack.insert( insert_pos, new_trsm_gemm );
+					insert_pos = job_stack.insert( insert_pos, new_getrf );
+				}
+			}
+		}
+	}
 }
