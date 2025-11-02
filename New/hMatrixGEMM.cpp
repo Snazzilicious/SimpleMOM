@@ -27,13 +27,13 @@ void LR_to_LR_GEMM( alpha, A, B, C ){
 		new_left_basis.dense_mat = A.left;
 		new_right_basis.dense_mat = zeros;
 		new_operand = A.right;
-		HHL_gemm( new_operand, B, new_right_basis ); // will not recall this function
+		HHL_gemm( new_operand, B, new_right_basis ); // will not re-call this function
 	}
 	else {
 		new_left_basis.dense_mat = zeros;
 		new_right_basis.dense_mat = B.right;
 		new_operand = B.left;
-		HHL_gemm( A, new_operand, new_left_basis ); // will not recall this function
+		HHL_gemm( A, new_operand, new_left_basis ); // will not re-call this function
 	}
 	
 	// TODO copy new_left_basis.mat into c.left, unless is the same
@@ -48,7 +48,7 @@ void Leaf_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
 	auto type_b = b.block_type();
 	auto type_c = c.block_type();
 	
-	if( type_c == DenseMatrix ){
+	if( type_c == hMatrix::BlockType::Dense ){
 		// going straight in
 	
 	}

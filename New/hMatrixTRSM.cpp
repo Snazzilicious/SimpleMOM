@@ -1,9 +1,8 @@
 
 // TODO
 // Tri Solves
-//    need ?laswp
-//        add this to Leaf_TRSM, plus passing the ipiv vector some how
 // MPI OOC
+//    need matrix concatenation for solving across OOC part boundaries
 // Dist Disk
 
 
@@ -14,8 +13,20 @@ void Leaf_TRSM( char side, char uplo, char diag, hMatrixInterface A, hMatrixInte
 	
 	// Get pointers of dense data, (and strides and layouts)
 	
-	// solve
-	trsm( ... );
+	if( side == 'L' && uplo == 'L' ){
+		LAPACKE_?laswp( matrix_layout, n, a, lda, k1, k2, ipiv, incx );
+		trsm( 'Left', 'Lower', 'No transpose', 'Unit', n, nrhs, one, a, lda, b, ldb );
+	}
+	else if( side == 'R' && uplo == 'L' ){
+		LAPACKE_?laswp( (matrix_layout+1) % 2, n, a, lda, k1, k2, ipiv, -1 );
+		trsm( 'Right', 'Lower', 'Transpose', 'Unit', n, nrhs, one, a, lda, b, ldb );
+	}
+	else if( side == 'L' && uplo == 'U' ){
+		trsm( 'Left', 'Upper', 'No transpose', 'Non-unit', n, nrhs, one, a, lda, b, ldb );
+	}
+	else {
+		trsm( 'Right', 'Upper', 'No transpose', 'Non-unit', n, nrhs, one, a, lda, b, ldb );
+	}
 }
 
 
@@ -41,8 +52,8 @@ void LUH_trsm( char side, char uplo, char diag, hMatrixInterface A, hMatrixInter
 			
 			if( b.block_type() == hMatrix::BlockType::LowRank ){
 				hMatrix b_wrapper;
-				b_wrapper.dense = b.
-				Leaf_TRSM( side, uplo, diag, A, b );
+				b_wrapper.dense = b.left ;
+				Leaf_TRSM( side, uplo, diag, A, b_wrapper );
 			}
 			else if( b.block_type() == hMatrix::BlockType::Dense ){
 				Leaf_TRSM( side, uplo, diag, A, b );
@@ -73,8 +84,8 @@ void LUH_trsm( char side, char uplo, char diag, hMatrixInterface A, hMatrixInter
 			
 			if( b.block_type() == hMatrix::BlockType::LowRank ){
 				hMatrix b_wrapper;
-				b_wrapper.dense = b.
-				Leaf_TRSM( side, uplo, diag, A, b );
+				b_wrapper.dense = b.right
+				Leaf_TRSM( side, uplo, diag, A, b_wrapper );
 			}
 			else if( b.block_type() == hMatrix::BlockType::Dense ){
 				Leaf_TRSM( side, uplo, diag, A, b );

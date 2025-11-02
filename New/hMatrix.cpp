@@ -6,8 +6,7 @@
 //    need to identify and replace leaf nodes
 //    LR should check if has same dataset, maybe
 //    Hierarchy will not change in any routine
-// How to know when pointing to leaf node? extra hMatrix node? add "type" labels? - leaning towards both
-//    types for OOC and distributed matrices need to all be mutually disjoint, or need to be different node types
+// types for OOC and distributed matrices need to all be mutually disjoint, or need to be different node types
 // Constructing hMatrices
 //    Assigning matrix data to Dense and Low rank blocks
 //    Shared pointers to nodes + shared_from_this
@@ -16,6 +15,7 @@
 //    and replace node ptrs with iterators
 // OOC variants
 //    may want to generalize Slice to avoid duplication
+//    this could be at python level
 // Need a generic tree traversal and node retrieval algorithm - see BGL
 
 
@@ -29,13 +29,45 @@ class hMatrix {
 		enum class BlockType { Zero, Dense, LowRank, H };
 		
 		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
-			Slice whole_matrix( root, 0, root->nrows(), 0, root->ncols() );
-			return whole_matrix.slice( row_begin, row_end, col_begin, col_end );
+			Slice s( root, 0, root->nrows(), 0, root->ncols() );
+			return s.slice( row_begin, row_end, col_begin, col_end );
 		}
 		Slice slice(){
 			return slice( 0, root->nrows(), 0, root->ncols() );
 		}
+		
+		// Modifies tree structure, inserts exact values, returns Slice to output
+		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
+		static Slice insert( Slice input, Slice output ){
+			if( output.block_type() == BlockType::H ){
+				if( output.nrows() == output.root->nrows() && output.ncols() == output.root->ncols() )
+					// if output is whole node, insert each of input's children
+				else {
+					// create new (zero block) children, insert each child of input where appropriate
+					// insert slice of each old child into new child
+				}
+			}
+			else {
+				// split leaf into children
+			}
+			// Note may change block type
+		}
+		
+		// Preserves tree structure, may truncate
+		static void assign( Slice input, Slice output, Real tol=1e-5 );
 };
+
+template<typename Scalar>
+struct MatrixData {
+	std::shared_ptr<Scalar> data;
+	int nrows, ncols;
+	int layout;
+	int ld;
+}
+
+class ChildArray {
+
+}
 
 template<typename Scalar>
 class hMatrix::Node {
@@ -76,7 +108,7 @@ void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t
 class hMatrix::Slice {
 	private:
 		std::size_t rbegin, rend, cbegin, cend;
-		std::shared_ptr<Node> root; // make this an iterator to whatever contains these
+		std::shared_ptr<Node> root; // make this an iterator to whatever contains these - will require pointer / reference to tree object
 	
 	public:
 		Slice( std::shared_ptr<Node> root_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
