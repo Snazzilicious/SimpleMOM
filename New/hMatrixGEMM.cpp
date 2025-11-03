@@ -151,7 +151,7 @@ void hMatrixGEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixI
 
 	if ( !(A.nrows() == C.nrows() && B.ncols() == C.ncols() && A.ncols() == B.nrows()) )
 		throw std::runtime_error("hMatrixGEMM: Incompatible operand dimensions.");
-
+	
 	if ( alpha == Scalar(0.0) ) return;
 	
 	std:vector<typename hMatrixInterface::TreeIterator> C_leaves = C.get_leaves();

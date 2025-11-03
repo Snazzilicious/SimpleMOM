@@ -36,15 +36,20 @@ void hMatrixGETRF( IntIt piv, hMatrixInterface A ){
 		auto d = job.d;
 		
 		if( job.type == TRSM_GEMM ){
-			hMatrixLASWP( "L", p, b );
-			hMatrixTRSM( "L", "L", "U", a, b );
-			hMatrixTRSM( "R", "U", "N", a, c );
+			hMatrixTRSM( "L", "L", p, a, b );
+			hMatrixTRSM( "R", "U", p, a, c );
 			hMatrixGEMM( -1.0, c, b, d );
 		}
 		else /* job.type == GETRF */ {
+			// Base case
 			if( a.block_type() == hMatrix::BlockType::Dense ){
 				Leaf_GETRF( p, a );
 			}
+			// Invalid case
+			else if( a.block_type() == hMatrix::BlockType::Zero || a.block_type() == hMatrix::BlockType::LowRank ){
+				throw std::runtime_error("Rank-deficient diagonal block in GETRF");
+			}
+			// General case
 			else {
 				std::vector<std::size_t> diag_begins = a.row_begins();
 				
