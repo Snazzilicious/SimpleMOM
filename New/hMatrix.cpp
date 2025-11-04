@@ -68,7 +68,7 @@ class hMatrix {
 		}
 		
 		// Preserves tree structure, may truncate
-		static void assign( Slice input, Slice output, Real tol=1e-5 );
+		void assign( Slice input, Slice output, Real tol=1e-5 );
 };
 
 

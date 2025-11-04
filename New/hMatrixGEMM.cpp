@@ -42,18 +42,57 @@ void LR_to_LR_GEMM( alpha, A, B, C ){
 }
 
 
-void Leaf_GEMM( hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
+void Leaf_GEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixInterface C ){
 	// TODO
 	auto type_a = a.block_type();
 	auto type_b = b.block_type();
 	auto type_c = c.block_type();
 	
+	Scalar one = 1.0;
+	Scalar zero = 0.0;
+	
 	if( type_c == hMatrix::BlockType::Dense ){
 		// going straight in
-	
+		
+		// dense-dense: gemm : c += alpha*a*b
+		auto A_ptr = A.data();
+		int A_m = A.nrows();
+		int A_n = A.ncols();
+		int lda = A.ld();
+		int A_layout = A.layout;
+		
+		auto B_ptr = B.data();
+		int B_m = B.nrows();
+		int B_n = B.ncols();
+		int ldb = B.ld();
+		int B_layout = B.layout;
+		
+		auto C_ptr = C.data();
+		int C_m = C.nrows();
+		int C_n = C.ncols();
+		int ldb = C.ld();
+		int C_layout = C.layout;
+		
+		A_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
+		B_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
+		
+		cblas_gemm( C_layout, A_trans, B_trans, C_m, C_n, A_n, &alpha, A_ptr, lda, B_ptr, ldb, &one, C_ptr, ldc );
+		
+		// lowrank-lowrank: gemm x3 : tmp1 = alpha*a.right*b.left; tmp2 = tmp1*b.right; c += a.left*tmp2
+		
+		// lowrank-dense: gemm x2 : tmp1 = a.right*b; c += alpha*a.left*tmp1
+		
+		// dense-lowrank: gemm x2 : tmp1 = a*b.left; c += alpha*tmp1*b.right
+		
 	}
 	else {
 		// augment C to receive result
+		
+		// dense-dense: gemm, rSVD, LRadd, rSVD : tmp1 = alpha*a*b; tmp2 = rSVD(tmp1); c += tmp2; c = rSVD(c)
+		
+		// lowrank-lowrank: gemm x2, LRadd, rSVD : tmp1 = alpha*a.right*b.left; tmp2 = tmp1*b.right; c += tmp2; c = rSVD(c)
+		
+		// lowrank-dense - should never make it here
 	
 		rSVD( c );
 	}

@@ -4,9 +4,21 @@
 // Dist Disk
 
 void Leaf_GETRF( IntIt piv, hMatrixInterface A ){
-	// get pointers
+	auto A_ptr = A.data;
+	int m = A.nrows;
+	int n = A.ncols;
+	int lda = A.ld();
+	int matrix_layout = A.layout;
 	
-	getrf( ... );
+	int *p = ipiv.data();
+	
+	if( m != n )
+		throw std::runtime_error( "Non-square matrix in Leaf_GETRF: ("+ std::to_string(m) + ", " + std::to_string(n) + ")" );
+	
+	int err = LAPACKE_getrf( matrix_layout, m, m, A_ptr, lda, p );
+	
+	if( err )
+		throw std::runtime_error( "Error in Leaf_GETRF: " + to_string(err) );
 }
 
 

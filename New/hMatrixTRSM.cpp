@@ -9,24 +9,58 @@
 
 void Leaf_TRSM( char side, char uplo, IntIt ipiv, hMatrixInterface A, hMatrixInterface B ){
 
-	if ( !(A.block_type() == LU_Block && B.block_type() == DenseMatrix) )
+	if ( A.block_type() != hMatrix::BlockType::Dense || B.block_type() != hMatrix::BlockType::Dense )
 		throw std::runtime_error("hMatrixTRSM: Invalid operand types.");
 	
 	// Get pointers of dense data, (and strides and layouts)
+	auto A_ptr = A.data();
+	int A_m = A.nrows();
+	int A_n = A.ncols();
+	int lda = A.ld();
+	int A_layout = A.layout;
+	
+	auto B_ptr = B.data();
+	int B_m = B.nrows();
+	int B_n = B.ncols();
+	int ldb = B.ld();
+	int B_layout = B.layout;
+	
+	int *p = ipiv.data();
+	
+	Scalar alpha = 1.0;
 	
 	if( side == 'L' && uplo == 'L' ){
-		LAPACKE_?laswp( matrix_layout, n, a, lda, k1, k2, ipiv, incx );
-		trsm( 'Left', 'Lower', 'No transpose', 'Unit', n, nrhs, one, a, lda, b, ldb );
+		// B = P^-1 B
+		int err = LAPACKE_?laswp( B_layout, B_n, B_ptr, ldb, 1, B_m, ipiv, 1 );
+		if( err ) throw std::runtime_error( "LASWP failed in Leaf_TRSM" );
+		
+		// B = L^-1 B
+		A_uplo = A_layout == B_layout ? CblasLower : CblasUpper;
+		A_trans = A_layout == B_layout ? CblasNoTrans : CblasTrans;
+		cblas_trsm( B_layout, CblasLeft, A_uplo, A_trans, CblasUnit, A_m, B_n, &alpha, A_ptr, lda, B_ptr, ldb );
 	}
 	else if( side == 'R' && uplo == 'L' ){
-		LAPACKE_?laswp( (matrix_layout+1) % 2, n, a, lda, k1, k2, ipiv, -1 );
-		trsm( 'Right', 'Lower', 'Transpose', 'Unit', n, nrhs, one, a, lda, b, ldb );
+		// B = B L^-1
+		A_uplo = A_layout == B_layout ? CblasLower : CblasUpper;
+		A_trans = A_layout == B_layout ? CblasNoTrans : CblasTrans;
+		cblas_trsm( B_layout, CblasRight, A_uplo, A_trans, CblasUnit, A_m, B_n, &alpha, A_ptr, lda, B_ptr, ldb );
+		
+		// B = B P^-1
+		order = B_layout == COL_MAJOR ? LAPACK_ROW_MAJOR : LAPACK_COL_MAJOR;
+		int err = LAPACKE_?laswp( order, B_m, B_ptr, ldb, 1, B_n, ipiv, -1 );
+		if( err ) throw std::runtime_error( "LASWP failed in Leaf_TRSM" );
 	}
 	else if( side == 'L' && uplo == 'U' ){
-		trsm( 'Left', 'Upper', 'No transpose', 'Non-unit', n, nrhs, one, a, lda, b, ldb );
+		// B = U^-1 B
+		A_uplo = A_layout == B_layout ? CblasUpper : CblasLower;
+		A_trans = A_layout == B_layout ? CblasNoTrans : CblasTrans;
+		cblas_trsm( B_layout, CblasLeft, A_uplo, A_trans, CblasNonUnit, A_m, B_n, &alpha, A_ptr, lda, B_ptr, ldb );
 	}
-	else {
-		trsm( 'Right', 'Upper', 'No transpose', 'Non-unit', n, nrhs, one, a, lda, b, ldb );
+	else /* side == 'R' && uplo == 'U' */ {
+		// B = B U^-1
+		A_uplo = A_layout == B_layout ? CblasUpper : CblasLower;
+		A_trans = A_layout == B_layout ? CblasNoTrans : CblasTrans;
+		cblas_trsm( B_layout, CblasRight, A_uplo, A_trans, CblasNonUnit, A_m, B_n, &alpha, A_ptr, lda, B_ptr, ldb );
 	}
 }
 
