@@ -2,6 +2,7 @@
 // TODO
 // Leaf blocks - template on type
 //    poylmorphic shared_ptrs
+//    slice these
 // Set item
 //    matrix data insert vs hierarchy insert
 //    need to identify and replace leaf nodes
@@ -91,9 +92,7 @@ struct MatrixData {
 };
 
 template<typename Scalar>
-struct DenseBlock : public Payload {
-	MatrixData<Scalar> D;
-};
+struct DenseBlock : public Payload, MatrixData {};
 
 template<typename Scalar>
 struct LowRankBlock : public Payload {

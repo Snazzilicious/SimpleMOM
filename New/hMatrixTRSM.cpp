@@ -13,19 +13,19 @@ void Leaf_TRSM( char side, char uplo, IntIt ipiv, hMatrixInterface A, hMatrixInt
 		throw std::runtime_error("hMatrixTRSM: Invalid operand types.");
 	
 	// Get pointers of dense data, (and strides and layouts)
-	auto A_ptr = A.data();
+	auto A_ptr = A.get_ptr();
 	int A_m = A.nrows();
 	int A_n = A.ncols();
 	int lda = A.ld();
 	int A_layout = A.layout;
 	
-	auto B_ptr = B.data();
+	auto B_ptr = B.get_ptr();
 	int B_m = B.nrows();
 	int B_n = B.ncols();
 	int ldb = B.ld();
 	int B_layout = B.layout;
 	
-	int *p = ipiv.data();
+	int *p = ipiv.get_ptr();
 	
 	Scalar alpha = 1.0;
 	

@@ -4,7 +4,7 @@
 // Dist Disk
 
 void Leaf_GETRF( IntIt piv, hMatrixInterface A ){
-	auto A_ptr = A.data;
+	auto A_ptr = A.get_ptr();
 	int m = A.nrows;
 	int n = A.ncols;
 	int lda = A.ld();

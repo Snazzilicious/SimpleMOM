@@ -1,12 +1,11 @@
 
 // TODO
 // Hierarchy must not change in any routine
-// subroutine error checking, debug and release, and early exiting
+// subroutine error checking
 // Matrix multiply
-//    All combinations
-//        LR+LR should still check for same dataset
+//    llaxpy - must check for same dataset
 //    rSVD
-///   Force truncation of insert into Low Rank blocks
+//    both require assignment to slice of low rank block
 // Distributed Memory
 //    how to "send" slices
 //    slices must stop at the in-core block level i.e. a loadable hMatrix is the leaf data of an OOC hMatrix
@@ -18,6 +17,19 @@
 
 void augment_low_rank( hMatrixInterface M, std::size_t new_rank ){
 	// TODO
+}
+
+LowRankBlock rSVD( MatrixData A ){
+
+}
+
+LowRankBlock rSVD( LowRankBlock A ){
+
+}
+
+
+void llaxpy( LowRankBlock X, LowRankBlock Y ){
+
 }
 
 void LR_to_LR_GEMM( alpha, A, B, C ){
@@ -36,9 +48,114 @@ void LR_to_LR_GEMM( alpha, A, B, C ){
 		HHL_gemm( A, new_operand, new_left_basis ); // will not re-call this function
 	}
 	
-	// TODO copy new_left_basis.mat into c.left, unless is the same
-	// TODO copy new_right_basis.mat into c.right, unless is the same
-	rSVD( C );
+	LowRankBlock wrapper( new_left_basis, new_right_basis );
+	llaxpy( wrapper, C );
+	C = rSVD( C );
+}
+
+
+void dddgemm( Scalar alpha, const MatrixData& A, const MatrixData& B, MatrixData& C ){
+	
+	Scalar one = 1.0;
+	
+	auto A_ptr = A.get_ptr();
+	int A_m = A.nrows();
+	int A_n = A.ncols();
+	int lda = A.ld();
+	int A_layout = A.layout;
+	
+	auto B_ptr = B.get_ptr();
+	int B_m = B.nrows();
+	int B_n = B.ncols();
+	int ldb = B.ld();
+	int B_layout = B.layout;
+	
+	auto C_ptr = C.get_ptr();
+	int C_m = C.nrows();
+	int C_n = C.ncols();
+	int ldb = C.ld();
+	int C_layout = C.layout;
+	
+	A_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
+	B_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
+	
+	cblas_gemm( C_layout, A_trans, B_trans, C_m, C_n, A_n, &alpha, A_ptr, lda, B_ptr, ldb, &one, C_ptr, ldc );
+}
+
+
+void lddgemm( Scalar alpha, const LowRankBlock& A, const DenseBlock& B, DenseBlock& C ){
+	
+	Scalar one = 1.0;
+	
+	DenseBlock tmp1( A.rank(), B.ncols() );
+	dddgemm( alpha, A.right, B, tmp1 );
+	
+	dddgemm( one, A.left, tmp1, C );
+}
+
+void dldgemm( Scalar alpha, const DenseBlock& B, const LowRankBlock& A, DenseBlock& C ){
+	
+	Scalar one = 1.0;
+	
+	DenseBlock tmp1( A.nrows(), B.rank() );
+	dddgemm( alpha, A, B.left, tmp1 );
+	
+	dddgemm( one, tmp1, B.right, C );
+}
+
+
+void lldgemm( Scalar alpha, const LowRankBlock& A, const LowRankBlock& B, DenseBlock& C ){
+
+	Scalar one = 1.0;
+	
+	DenseBlock tmp1( A.rank(), B.rank() );
+	dddgemm( alpha, A.right, B.left, tmp1 );
+	
+	DenseBlock tmp2;
+	if( tmp1.nrows() * B.right.ncols() < A.left.nrows() * tmp1.ncols() ){
+		tmp2.resize( tmp1.nrows(), B.right.ncols() );
+		dddgemm( one, tmp1, B.right, tmp2 );
+		dddgemm( one, A.left, tmp2, C );
+	}
+	else{
+		tmp2.resize( A.left.nrows(), tmp1.ncols() );
+		dddgemm( one, A.left, tmp1, tmp2 );
+		dddgemm( one, tmp2, B.right, C );
+	}
+}
+
+void ddlgemm( Scalar alpha, const DenseBlock& A, const DenseBlock& B, LowRankBlock& C ){
+
+	Scalar one = 1.0;
+	
+	DenseBlock tmp1( A.nrows(), B.ncols() );
+	dddgemm( alpha, A, B, tmp1 );
+	
+	LowRankBlock tmp2 = rSVD( tmp1, tol, max_rank );
+	
+	llaxpy( one, tmp2, C ); // XXX this checks for same bases
+	
+	C = rSVD( C, tol, max_rank );
+}
+
+void lllgemm( Scalar alpha, const LowRankBlock& A, const LowRankBlock& B, LowRankBlock& C ){
+
+	Scalar one = 1.0;
+	
+	DenseBlock tmp1( A.rank(), B.rank() );
+	dddgemm( alpha, A.right, B.left, tmp1 );
+	
+	// TODO pick whichever one is not the same basis
+	if( A.left.data() == C.left.data() ){
+		tmp2 = tmp1 * B.right
+		wrap A.left, tmp2
+	}
+	else if( B.right.data() == C.right.data() ){
+		tmp2 = A.left * tmp1
+		wrap tmp2, B.right
+	}
+	llaxpy( wrapper, C )
+	rSVD // checks for same basis
 }
 
 
@@ -51,46 +168,27 @@ void Leaf_GEMM( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixInt
 	Scalar one = 1.0;
 	Scalar zero = 0.0;
 	
+	if( type_c == hMatrix::BlockType::Zero )
+		// convert to low rank
+	
 	if( type_c == hMatrix::BlockType::Dense ){
 		// going straight in
 		
 		// dense-dense: gemm : c += alpha*a*b
-		auto A_ptr = A.data();
-		int A_m = A.nrows();
-		int A_n = A.ncols();
-		int lda = A.ld();
-		int A_layout = A.layout;
-		
-		auto B_ptr = B.data();
-		int B_m = B.nrows();
-		int B_n = B.ncols();
-		int ldb = B.ld();
-		int B_layout = B.layout;
-		
-		auto C_ptr = C.data();
-		int C_m = C.nrows();
-		int C_n = C.ncols();
-		int ldb = C.ld();
-		int C_layout = C.layout;
-		
-		A_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
-		B_trans = A_layout == C_layout ? CblasNoTrans : CblasTrans;
-		
-		cblas_gemm( C_layout, A_trans, B_trans, C_m, C_n, A_n, &alpha, A_ptr, lda, B_ptr, ldb, &one, C_ptr, ldc );
 		
 		// lowrank-lowrank: gemm x3 : tmp1 = alpha*a.right*b.left; tmp2 = tmp1*b.right; c += a.left*tmp2
 		
-		// lowrank-dense: gemm x2 : tmp1 = a.right*b; c += alpha*a.left*tmp1
+		// lowrank-dense: gemm x2 : tmp1 = alpha*a.right*b; c += a.left*tmp1
 		
 		// dense-lowrank: gemm x2 : tmp1 = a*b.left; c += alpha*tmp1*b.right
 		
 	}
-	else {
+	else if( type_c == hMatrix::BlockType::LowRank ){
 		// augment C to receive result
 		
-		// dense-dense: gemm, rSVD, LRadd, rSVD : tmp1 = alpha*a*b; tmp2 = rSVD(tmp1); c += tmp2; c = rSVD(c)
+		// dense-dense: gemm, rSVD, LRadd, rSVD : tmp1 = alpha*a*b; tmp2 = rSVD(tmp1); c += tmp2; c = rSVD(c), possibly convert to dense
 		
-		// lowrank-lowrank: gemm x2, LRadd, rSVD : tmp1 = alpha*a.right*b.left; tmp2 = tmp1*b.right; c += tmp2; c = rSVD(c)
+		// lowrank-lowrank: gemm x2, LRadd, rSVD : tmp1 = alpha*a.right*b.left; tmp2 = tmp1*b.right; c += tmp2; c = rSVD(c), possibly convert to dense
 		
 		// lowrank-dense - should never make it here
 	
