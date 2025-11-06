@@ -86,9 +86,7 @@ void LUH_trsm( char side, char uplo, IntIt ipiv, hMatrixInterface A, hMatrixInte
 			auto b = B.slice( 0, B.nrows(), col_begin, col_end );
 			
 			if( b.block_type() == hMatrix::BlockType::LowRank ){
-				// TODO
-				hMatrix b_wrapper;
-				b_wrapper.dense = b.left ;
+				DenseBlock b_wrapper( b.left );
 				Leaf_TRSM( side, uplo, diag, A, b_wrapper );
 			}
 			else if( b.block_type() == hMatrix::BlockType::Dense ){
@@ -119,9 +117,7 @@ void LUH_trsm( char side, char uplo, IntIt ipiv, hMatrixInterface A, hMatrixInte
 			auto b = B.slice( row_begin, row_end, 0, B.ncols() );
 			
 			if( b.block_type() == hMatrix::BlockType::LowRank ){
-				// TODO
-				hMatrix b_wrapper;
-				b_wrapper.dense = b.right
+				DenseBlock b_wrapper( b.right );
 				Leaf_TRSM( side, uplo, diag, A, b_wrapper );
 			}
 			else if( b.block_type() == hMatrix::BlockType::Dense ){

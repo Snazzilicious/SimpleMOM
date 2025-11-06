@@ -6,6 +6,7 @@
 //    llaxpy - must check for same dataset
 //    rSVD
 //    both require assignment to slice of low rank block
+//        assign dense to LR: subtract from dense, rSVD, llaxpy
 // Distributed Memory
 //    how to "send" slices
 //    slices must stop at the in-core block level i.e. a loadable hMatrix is the leaf data of an OOC hMatrix
@@ -19,7 +20,7 @@ void augment_low_rank( hMatrixInterface M, std::size_t new_rank ){
 	// TODO
 }
 
-LowRankBlock rSVD( MatrixData A ){
+LowRankBlock rSVD( DenseBlock A ){
 
 }
 
@@ -51,10 +52,11 @@ void LR_to_LR_GEMM( alpha, A, B, C ){
 	LowRankBlock wrapper( new_left_basis, new_right_basis );
 	llaxpy( wrapper, C );
 	C = rSVD( C );
+	// possibly convert to dense
 }
 
 
-void dddgemm( Scalar alpha, const MatrixData& A, const MatrixData& B, MatrixData& C ){
+void dddgemm( Scalar alpha, const DenseBlock& A, const DenseBlock& B, DenseBlock& C ){
 	
 	Scalar one = 1.0;
 	

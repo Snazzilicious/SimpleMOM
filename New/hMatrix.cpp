@@ -1,5 +1,6 @@
 
 // TODO
+// unique_ptr vs shared ptr
 // Leaf blocks - template on type
 //    poylmorphic shared_ptrs
 //    slice these
@@ -25,7 +26,7 @@ class hMatrix {
 	private:
 		class Node;
 		class Slice;
-		std::shared_ptr<Node> root; // make this an iterator to whatever contains these
+		Node root; // make this an iterator to whatever contains these
 		
 		// the graph
 		
@@ -36,9 +37,7 @@ class hMatrix {
 		// hash_table of children configurations
 	
 	public:
-		hMatrix( std::size_t n_rows, std::size_t n_cols ){
-			root = std::make_shared<Node>( n_rows, n_cols );
-		}
+		hMatrix( std::size_t n_rows, std::size_t n_cols ) : root( n_rows, n_cols ) {}
 		
 		
 		enum class BlockType { Zero, Dense, LowRank, H };
@@ -52,6 +51,7 @@ class hMatrix {
 		}
 		
 		
+		// for inserting hierarchical nodes
 		void partition( Slice position, const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins ){
 			if( position.block_type() != BlockType::Zero )
 				throw std::runtime_error( "Can only insert into Zero block." ); // technically can insert anything anywhere, just not worth implementing
@@ -59,7 +59,7 @@ class hMatrix {
 			
 		}
 		
-		
+		// for inserting leaf data
 		// Modifies tree structure, inserts exact values, returns Slice to output
 		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
 		Slice insert( Slice position, payload_t p ){
@@ -68,8 +68,32 @@ class hMatrix {
 			// 
 		}
 		
+		// for assigning to leaves, preserving hierarchical structure
 		// Preserves tree structure, may truncate
 		void assign( Slice input, Slice output, Real tol=1e-5 );
+};
+
+
+
+template<typename Scalar>
+struct MatrixData {
+	std::shared_ptr<Scalar> _data;
+	int _begin_offset;
+	int _nrows, _ncols;
+	int _layout;
+	int ld();
+	
+	MatrixData( int rows, int cols ) : _nrows(nrows), _ncols(ncols), _begin_offset(0), _layout(COL_MAJOR) {
+		data = make_shared<Scalar>( _nrows*_ncols );
+	}
+	
+	MatrixData slice( int row_begin, int row_end, int col_begin, int col_end ){
+		// TODO
+	}
+	
+	MatrixData transpose(){
+	
+	}
 };
 
 
@@ -83,38 +107,33 @@ struct Payload {
 		virtual ~Payload(){}
 };
 
-template<typename Scalar>
-struct MatrixData {
-	std::shared_ptr<Scalar> data;
-	int nrows, ncols;
-	int layout;
-	int ld();
-};
 
 template<typename Scalar>
-struct DenseBlock : public Payload, MatrixData {};
+struct DenseBlock : public Payload {
+	MatrixData<Scalar> mat;
+};
 
 template<typename Scalar>
 struct LowRankBlock : public Payload {
-	MatrixData<Scalar> U,V;
+	MatrixData<Scalar> left,right;
 };
 
 class ChildArray : public Payload {
-	std::vector<hMatrix::Node> blocks;
-	int nrows, ncols;
-	int layout;
-	int ld();
+	MatrixData<hMatrix::Node> blocks;
 };
+
+
+
 
 template<typename Scalar>
 class hMatrix::Node {
 	private:
 		std::size_t _nrows,_ncols;
-		std::shared_ptr<Payload> payload;
+		std::unique_ptr<Payload> payload;
 	
 	public:
 		Node( std::size_t n_rows, std::size_t n_cols ) : _nrows(n_rows), _ncols(n_cols) {
-			payload = std::make_shared<Payload>( BlockType::Zero );
+			payload = std::make_unique<Payload>( BlockType::Zero );
 		}
 		
 		BlockType block_type(){ return payload->block_type(); }
@@ -164,27 +183,6 @@ class hMatrix::Node {
 
 
 
-template<typename Scalar>
-struct MatrixDataSlice {
-	std::shared_ptr<Scalar> data;
-	Scalar *ptr;
-	int nrows, ncols;
-	int layout;
-	int ld;
-};
-
-template<typename Scalar>
-struct DenseBlockSlice {
-	MatrixDataSlice<Scalar> D;
-};
-
-template<typename Scalar>
-struct LowRankBlockSlice {
-	MatrixDataSlice<Scalar> U,V;
-};
-
-
-
 void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end std::size_t ncols, std::size_t nrows ){
 	if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
 		throw std::runtime_error("Invalid slice range.");
@@ -193,11 +191,11 @@ void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t
 
 class hMatrix::Slice {
 	private:
+		Node& root; // make this an iterator to whatever contains these - will require pointer / reference to tree object
 		std::size_t rbegin, rend, cbegin, cend;
-		std::shared_ptr<Node> root; // make this an iterator to whatever contains these - will require pointer / reference to tree object
 	
 	public:
-		Slice( std::shared_ptr<Node> root_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
+		Slice( Node& root_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
 			: root(root_node), rbegin(row_begin), rend(row_end), cbegin(col_begin), cend(col_end)
 		{
 			check_slice_limits( row_begin, row_end, col_begin, col_end, root_node->nrows(), root_node->ncols() );
@@ -237,11 +235,11 @@ class hMatrix::Slice {
 			check_slice_limits( row_begin, row_end, col_begin, col_end, this->nrows(), this->ncols() );
 			
 			row_begin += rbegin;
-			row_end += rend;
+			row_end += rbegin;
 			col_begin += cbegin;
-			col_end += cend;
+			col_end += cbegin;
 			
-			auto node = root;
+			Node* node = &root;
 			bool fits_in_child = true;
 			while( fits_in_child && node->block_type() == BlockType::H ){
 				std::vector<std::size_t> row_begins = node->get_row_begins();
@@ -274,7 +272,7 @@ class hMatrix::Slice {
 				}
 			}
 			
-			return Slice( node, row_begin, row_end, col_begin, col_end );
+			return Slice( *node, row_begin, row_end, col_begin, col_end );
 		}
 };
 
