@@ -20,12 +20,11 @@
 //    this could be at python level
 //    should load from arbitrary slice
 // Need a generic tree traversal and node retrieval algorithm - see BGL
+// abstract out index type
 
 
 class hMatrix {
 	private:
-		class Node;
-		class Slice;
 		Node root; // make this an iterator to whatever contains these
 		
 		// the graph
@@ -35,6 +34,9 @@ class hMatrix {
 		// hash_table of LowRankBlocks
 		
 		// hash_table of children configurations
+		
+		class Node;
+		class Slice;
 	
 	public:
 		hMatrix( std::size_t n_rows, std::size_t n_cols ) : root( n_rows, n_cols ) {}
@@ -54,18 +56,21 @@ class hMatrix {
 		// for inserting hierarchical nodes
 		void partition( Slice position, const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins ){
 			if( position.block_type() != BlockType::Zero )
-				throw std::runtime_error( "Can only insert into Zero block." ); // technically can insert anything anywhere, just not worth implementing
+				throw std::runtime_error( "Attempt to partition non-Zero block." ); // really can insert anything anywhere, just not worth implementing
 			
-			
+			//
 		}
 		
 		// for inserting leaf data
 		// Modifies tree structure, inserts exact values, returns Slice to output
 		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
-		Slice insert( Slice position, payload_t p ){
-			// partition first
+		// assumes ownership of the matrix data pointed to by the 
+		Slice insert( Slice position, Payload p ){
+			// error checking
 			
-			// 
+			// allocate node.payload as appropriate type
+			
+			// copy *p
 		}
 		
 		// for assigning to leaves, preserving hierarchical structure
@@ -81,7 +86,7 @@ struct MatrixData {
 	int _begin_offset;
 	int _nrows, _ncols;
 	int _layout;
-	int ld();
+	int ld;
 	
 	MatrixData( int rows, int cols ) : _nrows(nrows), _ncols(ncols), _begin_offset(0), _layout(COL_MAJOR) {
 		data = make_shared<Scalar>( _nrows*_ncols );
@@ -101,25 +106,48 @@ struct Payload {
 	private:
 		BlockType _block_type;
 	
-	public:
+	protected:
 		Payload( BlockType type ) : _block_type(type) {}
+	
+	public:
 		BlockType block_type(){ return _block_type; }
 		virtual ~Payload(){}
+		virtual std::size_t nrows()=0;
+		virtual std::size_t ncols()=0;
+};
+
+
+struct ZeroBlock : public Payload {
+	ZeroBlock( std::size_t n_rows, std::size_t n_cols ) : Payload( BlockType::Zero ), _nrows(n_rows), _ncols(n_cols) {}
+	std::size_t _nrows,_ncols;
+	
+	std::size_t nrows() override { return _nrows; }
+	std::size_t ncols() override { return _ncols; }
 };
 
 
 template<typename Scalar>
 struct DenseBlock : public Payload {
 	MatrixData<Scalar> mat;
+	
+	std::size_t nrows() override { return mat->nrows; }
+	std::size_t ncols() override { return mat->ncols; }
 };
 
 template<typename Scalar>
 struct LowRankBlock : public Payload {
 	MatrixData<Scalar> left,right;
+	
+	std::size_t nrows() override { return left->nrows; }
+	std::size_t ncols() override { return right->ncols; }
 };
 
 class ChildArray : public Payload {
+	std::size_t _nrows,_ncols;
 	MatrixData<hMatrix::Node> blocks;
+	
+	std::size_t nrows() override { return _nrows; }
+	std::size_t ncols() override { return _ncols; }
 };
 
 
@@ -128,18 +156,17 @@ class ChildArray : public Payload {
 template<typename Scalar>
 class hMatrix::Node {
 	private:
-		std::size_t _nrows,_ncols;
 		std::unique_ptr<Payload> payload;
 	
 	public:
-		Node( std::size_t n_rows, std::size_t n_cols ) : _nrows(n_rows), _ncols(n_cols) {
-			payload = std::make_unique<Payload>( BlockType::Zero );
+		Node( std::size_t n_rows, std::size_t n_cols ){
+			payload = std::make_unique<ZeroBlock>( n_rows, n_cols );
 		}
 		
 		BlockType block_type(){ return payload->block_type(); }
 		
-		std::size_t nrows(){ return _nrows; }
-		std::size_t ncols(){ return _ncols; }
+		std::size_t nrows(){ return payload->nrows(); }
+		std::size_t ncols(){ return payload->ncols(); }
 		
 		std::vector<std::size_t> get_row_begins(){
 			std::vector<std::size_t> begins;
@@ -154,7 +181,7 @@ class hMatrix::Node {
 			else {
 				begins.resize(2);
 				begins[0] = 0;
-				begins[1] = _nrows;
+				begins[1] = nrows();
 			}
 			return begins;
 		}
@@ -171,28 +198,45 @@ class hMatrix::Node {
 			else {
 				begins.resize(2);
 				begins[0] = 0;
-				begins[1] = _ncols;
+				begins[1] = ncols();
 			}
 			return begins;
 		}
 		
-		std::shared_ptr<DenseBlock> get_dense_block();
-		std::shared_ptr<LowRankBlock> get_low_rank_block();
-		std::shared_ptr<ChildArray> get_child_array();
+		DenseBlock& get_dense_block();
+		LowRankBlock& get_low_rank_block();
+		ChildArray& get_child_array();
 };
 
 
-
-void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end std::size_t ncols, std::size_t nrows ){
-	if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
-		throw std::runtime_error("Invalid slice range.");
-}
 
 
 class hMatrix::Slice {
 	private:
 		Node& root; // make this an iterator to whatever contains these - will require pointer / reference to tree object
 		std::size_t rbegin, rend, cbegin, cend;
+		
+		
+		static std::vector<std::size_t> begins_in_range( const std::vector<std::size_t>& begins, std::size_t begin, std::size_t end )
+		{
+			auto in_range_comp = [begin,end]( std::size_t v ){ return begin < v && v < end; };
+			
+			auto n_begins = std::count_if( begins.begin(), begins.end(), in_range_comp );
+			
+			n_begins += 2;
+			std::vector<std::size_t> in_range_begins( n_begins, 0 );
+			in_range_begins[ n_begins-1 ] = end;
+			
+			std::copy_if( begins.begin(), begins.end(), in_range_comp );
+		}
+		
+		
+		void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end,
+								std::size_t ncols, std::size_t nrows )
+		{
+			if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
+				throw std::runtime_error("Invalid slice range.");
+		}
 	
 	public:
 		Slice( Node& root_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
@@ -206,23 +250,12 @@ class hMatrix::Slice {
 		std::size_t nrows(){ return rend-rbegin; }
 		std::size_t ncols(){ return cend-cbegin; }
 		
+		
 		std::vector<std::size_t> get_row_begins(){
-			std::vector<std::size_t> root_begins = root->get_row_begins();
-			std::vector<std::size_t> begins = {0};
-			for( auto v : root_begins )
-				if( rbegin < v && v < rend )
-					begins.push_back( v-rbegin );
-			begins.push_back( rend-rbegin );
-			return begins;
+			return begins_in_range( root->get_row_begins(), rbegin, rend );
 		}
 		std::vector<std::size_t> get_col_begins(){
-			std::vector<std::size_t> root_begins = root->get_col_begins();
-			std::vector<std::size_t> begins = {0};
-			for( auto v : root_begins )
-				if( cbegin < v && v < cend )
-					begins.push_back( v-cbegin );
-			begins.push_back( cend-cbegin );
-			return begins;
+			return begins_in_range( root->get_col_begins(), cbegin, cend );
 		}
 		
 		
