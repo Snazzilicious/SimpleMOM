@@ -1,8 +1,6 @@
 
 // TODO
-// unique_ptr vs shared ptr
 // Leaf blocks - template on type
-//    poylmorphic shared_ptrs
 //    slice these
 // Set item
 //    matrix data insert vs hierarchy insert
@@ -21,30 +19,67 @@
 //    should load from arbitrary slice
 // Need a generic tree traversal and node retrieval algorithm - see BGL
 // abstract out index type
+// const
 
 
 
+void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end, std::size_t ncols, std::size_t nrows ){
+	if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
+		throw std::runtime_error("Invalid slice range.");
+}
 
 
 template<typename Scalar>
 struct MatrixData {
-	std::shared_ptr<Scalar> _data;
-	int _begin_offset;
-	int _nrows, _ncols;
-	int _layout;
-	int ld;
+	private:
+		std::unique_ptr<Scalar> _data;
+		int _begin_offset;
+		int _nrows, _ncols;
+		Layout _layout;
+		int _ld;
 	
-	MatrixData( int rows, int cols ) : _nrows(nrows), _ncols(ncols), _begin_offset(0), _layout(COL_MAJOR) {
-		data = make_shared<Scalar>( _nrows*_ncols );
-	}
-	
-	MatrixData slice( int row_begin, int row_end, int col_begin, int col_end ){
-		// TODO
-	}
-	
-	MatrixData transpose(){
-	
-	}
+	public:
+		MatrixData( int rows, int cols ) : _nrows(nrows), _ncols(ncols), _begin_offset(0), _layout(COL_MAJOR), ld(nrows) {
+			data = make_shared<Scalar>( _nrows*_ncols );
+		}
+		
+		MatrixData( const MatrixData& m ) : _data(m._data) _nrows(m._nrows), _ncols(m._ncols), _begin_offset(m._begin_offset), _layout(m._layout), _ld(m._ld) {}
+		
+		enum class Layout { COL_MAJOR, ROW_MAJOR }
+		
+		Scalar* get_ptr(){ return _data.get() + _begin_offset; }
+		int nrows(){ return _nrows; }
+		int ncols(){ return _ncols; }
+		Layout layout(){ return _layout; }
+		int cblas_layout(){ return _layout; }
+		int lapacke_layout(){ return _layout; }
+		int ld(){ return _ld; }
+		
+		MatrixData slice( int row_begin, int row_end, int col_begin, int col_end ){
+			check_slice_limits( row_begin, row_end, col_begin, col_end, _nrows, _ncols );
+			
+			MatrixData s(*this);
+			
+			s._begin_offset += layout == COL_MAJOR ? row_begin + col_begin*ld : row_begin*ld + col_begin ;
+			s._nrows = row_end-row_begin;
+			s._ncols = col_end-col_begin;
+			
+			return s;
+		}
+		
+		MatrixData transpose(){
+			MatrixData t(*this);
+			
+			t._layout = _layout == COL_MAJOR ? ROW_MAJOR : COL_MAJOR ;
+			t._nrows = _ncols;
+			t._ncols = _nrows;
+		}
+		
+		Scalar& at( int i, int j ){
+			check_slice_limits( i, i+1, j, j+1, _nrows, _ncols );
+			
+			return _layout == COL_MAJOR ? _data[ i + j*_ld ] : _data[ i*_ld + j ];
+		}
 };
 
 
@@ -64,36 +99,67 @@ struct Payload {
 
 
 struct ZeroBlock : public Payload {
-	ZeroBlock( std::size_t n_rows, std::size_t n_cols ) : Payload( BlockType::Zero ), _nrows(n_rows), _ncols(n_cols) {}
-	std::size_t _nrows,_ncols;
+	private:
+		std::size_t _nrows,_ncols;
 	
-	std::size_t nrows() override { return _nrows; }
-	std::size_t ncols() override { return _ncols; }
+	public:
+		ZeroBlock( std::size_t n_rows, std::size_t n_cols ) : Payload( BlockType::Zero ), _nrows(n_rows), _ncols(n_cols) {}
+	
+		std::size_t nrows() override { return _nrows; }
+		std::size_t ncols() override { return _ncols; }
 };
 
 
 template<typename Scalar>
 struct DenseBlock : public Payload {
-	MatrixData<Scalar> mat;
+	private:
+		MatrixData<Scalar> mat;
 	
-	std::size_t nrows() override { return mat->nrows; }
-	std::size_t ncols() override { return mat->ncols; }
+	public:
+		DenseBlock( std::size_t n_rows, std::size_t n_cols ) : mat(n_rows,n_cols) {}
+		DenseBlock( const MatrixData& m ) : mat(m) {}
+		
+		MatrixData& mat(){ return mat; }
+	
+		std::size_t nrows() override { return mat.nrows(); }
+		std::size_t ncols() override { return mat.ncols(); }
 };
+
 
 template<typename Scalar>
 struct LowRankBlock : public Payload {
-	MatrixData<Scalar> left,right;
+	private:
+		MatrixData<Scalar> left,right;
 	
-	std::size_t nrows() override { return left->nrows; }
-	std::size_t ncols() override { return right->ncols; }
+	public:
+		LowRankBlock( std::size_t n_rows, std::size_t n_cols, std::size_t rank ) : left(n_rows,rank), right(rank,n_cols) {}
+		
+		MatrixData& left(){ return left; }
+		MatrixData& right(){ return right; }
+		
+		std::size_t nrows() override { return left.nrows(); }
+		std::size_t ncols() override { return right.ncols(); }
+		std::size_t rank(){ return left.ncols(); }
 };
 
+
+template<typename Scalar>
 class ChildArray : public Payload {
-	std::size_t _nrows,_ncols;
-	MatrixData<hMatrix::Node> blocks;
+	private:
+		std::size_t _nrows,_ncols;
+		MatrixData<hMatrix<Scalar>> blocks;
 	
-	std::size_t nrows() override { return _nrows; }
-	std::size_t ncols() override { return _ncols; }
+	public:
+		ChildArray( std::size_t n_rows, std::size_t n_cols, std::size_t n_row_blocks, std::size_t n_col_blocks )
+		 : _nrows(n_rows), _ncols(n_cols), blocks(n_row_blocks,n_col_blocks) {}
+		 
+		 hMatrix<Scalar>& at( std::size_t i, std::size_t j ){ return blocks.at(i,j); }
+	
+		std::size_t nrows() override { return _nrows; }
+		std::size_t ncols() override { return _ncols; }
+		
+		std::size_t n_row_blocks() override { return blocks.nrows(); }
+		std::size_t n_col_blocks() override { return blocks.ncols(); }
 };
 
 
@@ -109,7 +175,7 @@ class hMatrix {
 		}
 	
 	public:
-		Node( std::size_t n_rows, std::size_t n_cols ){
+		hMatrix( std::size_t n_rows, std::size_t n_cols ){
 			payload = std::make_unique<ZeroBlock>( n_rows, n_cols );
 		}
 		
@@ -124,15 +190,13 @@ class hMatrix {
 			std::vector<std::size_t> begins;
 			if( this->block_type() == BlockType::H ){
 				auto children = get_child_array();
-				begins.resize( children->nrows+1 );
+				begins.resize( children.n_row_blocks()+1 );
 				begins[0] = 0;
 				for( std:size_t i=0; i<begins.size()-1; ++i )
 					begins[i+1] = begins[i] + children->blocks.at( i, 0 ).nrows();
 			}
 			else {
-				begins.resize(2);
-				begins[0] = 0;
-				begins[1] = nrows();
+				begins = { 0, nrows() };
 			}
 			return begins;
 		}
@@ -140,18 +204,22 @@ class hMatrix {
 			std::vector<std::size_t> begins;
 			if( this->block_type() == BlockType::H ){
 				auto children = get_child_array();
-				begins.resize( children->ncols+1 );
+				begins.resize( children.n_col_blocks()+1 );
 				begins[0] = 0;
 				for( std:size_t i=0; i<begins.size()-1; ++i )
 					begins[i+1] = begins[i] + children->blocks.at( 0, i ).ncols();
 			}
 			else {
-				begins.resize(2);
-				begins[0] = 0;
-				begins[1] = ncols();
+				begins = { 0, ncols() };
 			}
 			return begins;
 		}
+		
+		
+		
+		DenseBlock<Scalar>& get_dense_block();
+		LowRankBloc<Scalar>& get_low_rank_block();
+		ChildArray<Scalar>& get_child_array();
 		
 		
 		// find lowest node in the tree which completely contains the slice
@@ -187,7 +255,7 @@ class hMatrix {
 					col_begin -= col_begins[col_block];
 					col_end -= col_begins[col_block];
 					
-					node = node->children[row_block][col_block];
+					node = &(node->get_child_array().at(row_block, col_block ));
 				}
 			}
 			
@@ -196,34 +264,38 @@ class hMatrix {
 		
 		
 		// for inserting hierarchical nodes
-		void partition( const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins ){
+		void partition( const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins )
+		{
 			if( block_type() != BlockType::Zero )
-				throw std::runtime_error( "Attempt to partition non-Zero block." ); // really can insert anything anywhere, just not worth implementing
+				throw std::runtime_error( "Attempt to partition non-Zero block." ); // is possible to insert anything anywhere, just not worth implementing
 			if( !std::is_sorted( row_begins.begin(), row_begins.end() ) || !std::is_sorted( col_begins.begin(), col_begins.end() ) )
 				throw std::runtime_error( "Partition points are unsorted." );
 			if( row_begins.back() > this->nrows() || col_begins.back() > this->ncols() )
 				throw std::runtime_error( "Partition value(s) out of bounds." );
 			
-			payload = std::make_unique<ChildArray>( row_begins.size()-1, col_begins.size()-1 );
+			// TODO account for 0 and end
+			
+			std::size_t n_rows = nrows();
+			std::size_t n_cols = ncols();
+			payload = std::make_unique<ChildArray>( n_rows, n_cols, row_begins.size()-1, col_begins.size()-1 );
+			
+			auto children = get_child_array();
 			for( std::size_t i=0; i<row_begins.size()-1; ++i ){
 				for( std::size_t j=0; j<col_begins.size()-1; ++j ){
-					std::size_t nrows = row_begins[i+1]-row_begins[i];
-					std::size_t ncols = col_begins[i+1]-col_begins[i];
-					payload->at( i,j ).resize( nrows, ncols );
+					n_rows = row_begins[i+1]-row_begins[i];
+					n_cols = col_begins[i+1]-col_begins[i];
+					children.at( i,j ).resize( n_rows, n_cols );
 				}
 			}
 		}
-		
-		DenseBlock& get_dense_block();
-		LowRankBlock& get_low_rank_block();
-		ChildArray& get_child_array();
 	
 	
 		// for inserting leaf data
 		// Modifies tree structure, inserts exact values, returns Slice to output
 		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
 		// assumes ownership of the matrix data pointed to by the 
-		Slice insert( Slice position, Payload p ){
+		Slice insert( DenseBlock<Scalar> p ){
+		Slice insert( LowRankBlock<Scalar> p ){
 			// error checking
 			
 			// allocate node.payload as appropriate type
@@ -258,14 +330,6 @@ class hMatrix::Slice {
 			std::copy_if( begins.begin(), begins.end(), in_range_begins.begin(), in_range_comp );
 		}
 		
-		
-		void check_slice_limits( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end,
-								std::size_t ncols, std::size_t nrows )
-		{
-			if( row_begin > row_end || row_end > nrows || col_begin > col_end || col_end > ncols )
-				throw std::runtime_error("Invalid slice range.");
-		}
-	
 	public:
 		Slice( Node& root_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
 			: root(root_node), rbegin(row_begin), rend(row_end), cbegin(col_begin), cend(col_end)
