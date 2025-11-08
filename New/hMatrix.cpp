@@ -23,60 +23,6 @@
 // abstract out index type
 
 
-class hMatrix {
-	private:
-		Node root; // make this an iterator to whatever contains these
-		
-		// the graph
-		
-		// hash_table of DenseBlocks
-		
-		// hash_table of LowRankBlocks
-		
-		// hash_table of children configurations
-		
-		class Node;
-		class Slice;
-	
-	public:
-		hMatrix( std::size_t n_rows, std::size_t n_cols ) : root( n_rows, n_cols ) {}
-		
-		
-		enum class BlockType { Zero, Dense, LowRank, H };
-		
-		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
-			Slice s( root, 0, root->nrows(), 0, root->ncols() );
-			return s.slice( row_begin, row_end, col_begin, col_end );
-		}
-		Slice slice(){
-			return slice( 0, root->nrows(), 0, root->ncols() );
-		}
-		
-		
-		// for inserting hierarchical nodes
-		void partition( Slice position, const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins ){
-			if( position.block_type() != BlockType::Zero )
-				throw std::runtime_error( "Attempt to partition non-Zero block." ); // really can insert anything anywhere, just not worth implementing
-			
-			//
-		}
-		
-		// for inserting leaf data
-		// Modifies tree structure, inserts exact values, returns Slice to output
-		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
-		// assumes ownership of the matrix data pointed to by the 
-		Slice insert( Slice position, Payload p ){
-			// error checking
-			
-			// allocate node.payload as appropriate type
-			
-			// copy *p
-		}
-		
-		// for assigning to leaves, preserving hierarchical structure
-		// Preserves tree structure, may truncate
-		void assign( Slice input, Slice output, Real tol=1e-5 );
-};
 
 
 
@@ -154,14 +100,20 @@ class ChildArray : public Payload {
 
 
 template<typename Scalar>
-class hMatrix::Node {
+class hMatrix {
 	private:
 		std::unique_ptr<Payload> payload;
+		
+		void resize( std::size_t n_rows, std::size_t n_cols ){
+			payload = std::make_unique<ZeroBlock>( n_rows, n_cols );
+		}
 	
 	public:
 		Node( std::size_t n_rows, std::size_t n_cols ){
 			payload = std::make_unique<ZeroBlock>( n_rows, n_cols );
 		}
+		
+		enum class BlockType { Zero, Dense, LowRank, H };
 		
 		BlockType block_type(){ return payload->block_type(); }
 		
@@ -174,9 +126,8 @@ class hMatrix::Node {
 				auto children = get_child_array();
 				begins.resize( children->nrows+1 );
 				begins[0] = 0;
-				std::size_t ld = children->layout == ROW_MAJOR ? 1 : children->ld();
 				for( std:size_t i=0; i<begins.size()-1; ++i )
-					begins[i+1] = begins[i] + children->blocks[ i*ld ].nrows();
+					begins[i+1] = begins[i] + children->blocks.at( i, 0 ).nrows();
 			}
 			else {
 				begins.resize(2);
@@ -191,9 +142,8 @@ class hMatrix::Node {
 				auto children = get_child_array();
 				begins.resize( children->ncols+1 );
 				begins[0] = 0;
-				std::size_t ld = children->layout == COL_MAJOR ? 1 : children->ld();
 				for( std:size_t i=0; i<begins.size()-1; ++i )
-					begins[i+1] = begins[i] + children->blocks[ i*ld ].ncols();
+					begins[i+1] = begins[i] + children->blocks.at( 0, i ).ncols();
 			}
 			else {
 				begins.resize(2);
@@ -203,9 +153,87 @@ class hMatrix::Node {
 			return begins;
 		}
 		
+		
+		// find lowest node in the tree which completely contains the slice
+		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
+			check_slice_limits( row_begin, row_end, col_begin, col_end, this->nrows(), this->ncols() );
+			
+			Node* node = this;
+			bool fits_in_child = true;
+			while( fits_in_child && node->block_type() == BlockType::H ){
+				std::vector<std::size_t> row_begins = node->get_row_begins();
+				std::vector<std::size_t> col_begins = node->get_col_begins();
+				
+				// find first child intersected by slice
+				auto row_block_it = std::find_if( row_begins.begin(), row_begins.end(), 
+					[row_begin](std::size_t block_begin){
+						return block_begin<=row_begin;
+					}
+				);
+				auto col_block_it = std::find_if( col_begins.begin(), col_begins.end(), 
+					[col_begin](std::size_t block_begin){
+						return block_begin<=col_begin;
+					}
+				);
+				std::size_t row_block = row_block_it - row_begins.begin();
+				std::size_t col_block = col_block_it - col_begins.begin();
+				
+				fits_in_child = row_end <= row_begins[row_block+1] && col_end <= col_begins[col_block+1] ;
+				
+				// slice child
+				if( fits_in_child ){
+					row_begin -= row_begins[row_block];
+					row_end -= row_begins[row_block];
+					col_begin -= col_begins[col_block];
+					col_end -= col_begins[col_block];
+					
+					node = node->children[row_block][col_block];
+				}
+			}
+			
+			return Slice( *node, row_begin, row_end, col_begin, col_end );
+		}
+		
+		
+		// for inserting hierarchical nodes
+		void partition( const std::vector<std::size_t>& row_begins, const std::vector<std::size_t>& col_begins ){
+			if( block_type() != BlockType::Zero )
+				throw std::runtime_error( "Attempt to partition non-Zero block." ); // really can insert anything anywhere, just not worth implementing
+			if( !std::is_sorted( row_begins.begin(), row_begins.end() ) || !std::is_sorted( col_begins.begin(), col_begins.end() ) )
+				throw std::runtime_error( "Partition points are unsorted." );
+			if( row_begins.back() > this->nrows() || col_begins.back() > this->ncols() )
+				throw std::runtime_error( "Partition value(s) out of bounds." );
+			
+			payload = std::make_unique<ChildArray>( row_begins.size()-1, col_begins.size()-1 );
+			for( std::size_t i=0; i<row_begins.size()-1; ++i ){
+				for( std::size_t j=0; j<col_begins.size()-1; ++j ){
+					std::size_t nrows = row_begins[i+1]-row_begins[i];
+					std::size_t ncols = col_begins[i+1]-col_begins[i];
+					payload->at( i,j ).resize( nrows, ncols );
+				}
+			}
+		}
+		
 		DenseBlock& get_dense_block();
 		LowRankBlock& get_low_rank_block();
 		ChildArray& get_child_array();
+	
+	
+		// for inserting leaf data
+		// Modifies tree structure, inserts exact values, returns Slice to output
+		// always makes a copy of data to be inserted. To avoid this, insert empty nodes then assign to slices
+		// assumes ownership of the matrix data pointed to by the 
+		Slice insert( Slice position, Payload p ){
+			// error checking
+			
+			// allocate node.payload as appropriate type
+			
+			// copy *p
+		}
+		
+		// for assigning to leaves, preserving hierarchical structure
+		// Preserves tree structure, may truncate
+		void assign( Slice input, Slice output, Real tol=1e-5 );
 };
 
 
@@ -227,7 +255,7 @@ class hMatrix::Slice {
 			std::vector<std::size_t> in_range_begins( n_begins, 0 );
 			in_range_begins[ n_begins-1 ] = end;
 			
-			std::copy_if( begins.begin(), begins.end(), in_range_comp );
+			std::copy_if( begins.begin(), begins.end(), in_range_begins.begin(), in_range_comp );
 		}
 		
 		
@@ -272,40 +300,7 @@ class hMatrix::Slice {
 			col_begin += cbegin;
 			col_end += cbegin;
 			
-			Node* node = &root;
-			bool fits_in_child = true;
-			while( fits_in_child && node->block_type() == BlockType::H ){
-				std::vector<std::size_t> row_begins = node->get_row_begins();
-				std::vector<std::size_t> col_begins = node->get_col_begins();
-				
-				// find first child intersected by slice
-				auto row_block_it = std::find_if( row_begins.begin(), row_begins.end(), 
-					[row_begin](std::size_t block_begin){
-						return block_begin<=row_begin;
-					}
-				);
-				auto col_block_it = std::find_if( col_begins.begin(), col_begins.end(), 
-					[col_begin](std::size_t block_begin){
-						return block_begin<=col_begin;
-					}
-				);
-				std::size_t row_block = row_block_it - row_begins.begin();
-				std::size_t col_block = col_block_it - col_begins.begin();
-				
-				fits_in_child = row_end <= row_begins[row_block+1] && col_end <= col_begins[col_block+1] ;
-				
-				// slice child
-				if( fits_in_child ){
-					row_begin -= row_begins[row_block];
-					row_end -= row_begins[row_block];
-					col_begin -= col_begins[col_block];
-					col_end -= col_begins[col_block];
-					
-					node = node->children[row_block][col_block];
-				}
-			}
-			
-			return Slice( *node, row_begin, row_end, col_begin, col_end );
+			return root.slice( row_begin, row_end, col_begin, col_end );
 		}
 };
 
