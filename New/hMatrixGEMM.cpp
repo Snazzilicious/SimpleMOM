@@ -14,6 +14,7 @@
 //    Ref counting on disk?
 // Distributed Disk
 // API organization
+// Have not caught low-rank multiplication at the highest level
 
 
 void augment_low_rank( hMatrixInterface M, std::size_t new_rank ){
@@ -262,7 +263,7 @@ void HHL_gemm( Scalar alpha, hMatrixInterface A, hMatrixInterface B, hMatrixInte
 		auto type_b = b.block_type();
 		auto type_c = c.block_type();
 		
-		if( type_a != hMatrix::BlockType::Zero && type_b != hMatrix::BlockType::Zero ){
+		if( type_a != hMatrix::BlockType::Zero || type_b != hMatrix::BlockType::Zero ){
 			continue;
 		}
 		// Special case of LowRank times non-LowRank assigned to LowRank or Zero
