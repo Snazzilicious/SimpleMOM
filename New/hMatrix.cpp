@@ -29,7 +29,7 @@
 // rSVD
 	// d, lr
 
-
+template<typename Scalar>
 class hMatrix {
 	private:
 		
@@ -42,13 +42,13 @@ class hMatrix {
 		
 		std::size_t _block_size;
 		
-		std::vector<std::vector<std::size_t>> edges; // connectivity, OR matrix indices TODO structure children
+		std::vector<MatrixData<std::size_t>> connectivity; // connectivity, OR matrix indices TODO structure children
 		
 		std::vector<BlockType> types;
 		
 		std::vector<std::size_t> node_rows, node_cols;
 		
-		std::vector<MatrixData> matrices;
+		std::vector<MatrixData<Scalar>> matrices;
 		
 	public:
 		enum class BlockType { Zero, Dense, LowRank, H };
@@ -85,11 +85,11 @@ class hMatrix {
 		
 		TreeIterator insert_dense( const TreeIterator& node );
 		TreeIterator insert_lowrank( const TreeIterator& node );
-		TreeIterator insert_dense( const TreeIterator& node, const MatrixData& D );
-		TreeIterator insert_lowrank( const TreeIterator& node, const MatrixData& L, const MatrixData& R );
+		TreeIterator insert_dense( const TreeIterator& node, const MatrixData<Scalar>& D );
+		TreeIterator insert_lowrank( const TreeIterator& node, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
 		
-		void plus_assign( const Slice& submat, const DenseBlock& d );
-		void plus_assign( const Slice& submat, const LowRankBlock& lr );
+		void plus_assign( const Slice& submat, const MatrixData<Scalar>& D );
+		void plus_assign( const Slice& submat, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
 }
 
 
@@ -219,18 +219,6 @@ void hMatrix::partition( TreeIterator node, const Iterable& row_parts, const Ite
 }
 
 
-
-// must be on block boundaries
-Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
-{
-	// ensure start_node is Zero
-	// ensure ranges are sorted, in bounds, and on boundaries
-	
-	
-}
-
-// must be on block boundaries
-Slice slice( const Slice& submat, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 
 
 //------------------------------------------------------------------------------------------------------------------------------
