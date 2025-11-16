@@ -20,6 +20,7 @@
 // Need a generic tree traversal and node retrieval algorithm - see BGL
 // abstract out index type
 // const
+// this
 
 // Assign / +=
 	// d->d
@@ -40,9 +41,9 @@ class hMatrix {
 		// MatrixData container ???
 		// How to wrap a left or right basis?
 		
-		std::size_t _block_size;
+		std::size_t _min_block_size;
 		
-		std::vector<MatrixData<std::size_t>> connectivity; // connectivity, OR matrix indices TODO structure children
+		std::vector<MatrixData<std::size_t>> connectivity; // connectivity, OR matrix indices
 		
 		std::vector<BlockType> types;
 		
@@ -65,16 +66,28 @@ class hMatrix {
 		
 		hMatrix( std::size_t n_rows, std::size_t n_cols, std::size_t min_block_size=256 );
 		
+		std::size_t nrows();
+		std::size_t ncols();
+		std::size_t min_block_size();
+		
 		TreeIterator root_node();
 		Slice root_slice();
 		
-		std::size_t nrows();
-		std::size_t ncols();
 		std::size_t nrows( const TreeIterator& node );
 		std::size_t ncols( const TreeIterator& node );
+		BlockType block_type( const TreeIterator& node ); // TODO
 		
-		void partition( const TreeIterator& node, const Iterable& row_parts, const Iterable& col_parts );
-		TreeIterator get_child( const TreeIterator& node, std::size_t row_i, std::size_t col_i );
+		// Main tree construction routine(s)
+		void hMatrix::partition( const TreeIterator& node, const std::vector<std::size_t>& row_parts, const std::vector<std::size_t>& col_parts );
+		void hMatrix::partition( const TreeIterator& node, std::vector<std::size_t>& row_parts, std::vector<std::size_t>& col_parts );
+		TreeIterator insert_dense( const TreeIterator& node );
+		TreeIterator insert_lowrank( const TreeIterator& node );
+		TreeIterator insert_dense( const TreeIterator& node, const MatrixData<Scalar>& D );
+		TreeIterator insert_lowrank( const TreeIterator& node, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
+		
+		std::size_t nrow_children( const TreeIterator& node ); // TODO
+		std::size_t ncol_children( const TreeIterator& node ); // TODO
+		TreeIterator get_child( const TreeIterator& node, std::size_t row_i, std::size_t col_i ); // TODO
 		
 		std::vector<std::size_t> get_row_bounds( TreeIterator node );
 		std::vector<std::size_t> get_col_bounds( TreeIterator node );
@@ -83,13 +96,10 @@ class hMatrix {
 		Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		Slice slice( const Slice& submat, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
-		TreeIterator insert_dense( const TreeIterator& node );
-		TreeIterator insert_lowrank( const TreeIterator& node );
-		TreeIterator insert_dense( const TreeIterator& node, const MatrixData<Scalar>& D );
-		TreeIterator insert_lowrank( const TreeIterator& node, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
-		
 		void plus_assign( const Slice& submat, const MatrixData<Scalar>& D );
 		void plus_assign( const Slice& submat, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
+		
+		hMatrix change_min_block_size( std::size_t new_min_block_size );
 }
 
 
@@ -97,15 +107,19 @@ class hMatrix::TreeIterator {
 	private:
 		hMatrix *_parent;
 		std::size_t _node_index;
+		
+		TreeIterator( hMatrix *parent_matrix, std::size_t node_ID );
 	
 	public:
-		TreeIterator( hMatrix *parent_matrix, std::size_t node_ID );
-		
 		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		void partition( const Iterable& row_parts, const Iterable& col_parts );
 		
-		TreeIterator insert_dense( TreeIterator node );
-		TreeIterator insert_lowrank( TreeIterator node );
+		TreeIterator insert_dense();
+		TreeIterator insert_lowrank();
+		TreeIterator insert_dense( const MatrixData<Scalar>& D );
+		TreeIterator insert_lowrank( const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
+		
+		TreeIterator get_child( std::size_t row_i, std::size_t col_i );
 }
 
 
@@ -114,9 +128,9 @@ class hMatrix::Slice {
 		TreeIterator parent_node;
 		std::size_t rbegin, rend, cbegin, cend;
 		
-	public:
 		Slice( TreeIterator node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
+	public:
 		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
 		void assign( Slice submat, DenseBlock d );
@@ -170,7 +184,7 @@ static std::size_t hMatrix::block_begin( std::size_t min_block_size, std::size_t
 	return min_block_size * block_index + std::min( remainder, block_index );
 }
 
-static bool on_block_boundary( std::size_t min_block_size, std::size_t length, std::size_t position )
+static bool hMatrix::on_block_boundary( std::size_t min_block_size, std::size_t length, std::size_t position )
 {
 	if( position > length )
 		throw std::runtime_error("Position exceeds length");
@@ -186,38 +200,168 @@ static bool on_block_boundary( std::size_t min_block_size, std::size_t length, s
 
 
 
-hMatrix::hMatrix( std::size_t n_rows, std::size_t n_cols, std::size_t min_block_size ) : _block_size(min_block_size)
+hMatrix::hMatrix( std::size_t n_rows, std::size_t n_cols, std::size_t min_block_size ) : _min_block_size(min_block_size)
 {	
-	edges.emplace_back();
+	connectivity.emplace_back();
 	types.push_back( BlockType::Zero );
 	node_rows.push_back( n_rows );
 	node_cols.push_back( n_cols );
 }
 
+std::size_t hMatrix::nrows(){ return nrows( root_node() ); }
+std::size_t hMatrix::ncols(){ return ncols( root_node() ); }
+
+std::size_t hMatrix::min_block_size(){ return _min_block_size; }
 
 TreeIterator hMatrix::root_node(){ return TreeIterator( this, 0 ); }
 Slice hMatrix::root_slice(){ return Slice( root_node(), 0, nrows(), 0, ncols() ); }
 
-std::size_t hMatrix::nrows(){ return nrows( root_node() ); }
-std::size_t hMatrix::ncols(){ return ncols( root_node() ); }
-
-std::size_t hMatrix::nrows( const TreeIterator& node ){ return nrows[ node._node_index ]; }
-std::size_t hMatrix::ncols( const TreeIterator& node ){ return ncols[ node._node_index ]; }
-
-
-void hMatrix::partition( TreeIterator node, const Iterable& row_parts, const Iterable& col_parts )
-{
-	// ensure this is a zero block
-	
-	// ensure parts arrays are sorted and in bounds and on block boundaries
-	
-	// add 0 and end if not present
-	
-	// for each combination of rows/cols XXX need to structure children
-	//    insert a Zero block
-	//    add edge from node to new child
+std::size_t hMatrix::nrows( const TreeIterator& node ){
+	// TODO Validate iterator
+	return nrows[ node._node_index ];
+}
+std::size_t hMatrix::ncols( const TreeIterator& node ){
+	// TODO Validate iterator
+	return ncols[ node._node_index ];
 }
 
+
+void hMatrix::partition( const TreeIterator& node, const std::vector<std::size_t>& row_parts, const std::vector<std::size_t>& col_parts ){
+	std::vector<std::size_t> row_parts_copy( row_parts );
+	std::vector<std::size_t> col_parts_copy( col_parts );
+	partition( node, row_parts_copy, col_parts_copy );
+}
+void hMatrix::partition( const TreeIterator& node, std::vector<std::size_t>& row_parts, std::vector<std::size_t>& col_parts )
+{
+	// TODO Validate iterator
+	
+	std::size_t node_rows = this->nrows( node );
+	std::size_t node_cols = this->ncols( node );
+	std::size_t block_size = this->min_block_size();
+	
+	// ensure this is a zero block
+	if( block_type( node ) != BlockType::Zero )
+		throw std::runtime_error("Cannot partition non-zero block.");
+	
+	// ensure parts arrays are sorted and in bounds and on block boundaries
+	if( !std::is_sorted( row_parts.begin(), row_parts.end() ) )
+		throw std::runtime_error( "Row partition points are unsorted." );
+	if( !std::is_sorted( col_parts.begin(), col_parts.end() ) )
+		throw std::runtime_error( "Col partition points are unsorted." );
+	if( row_begins.back() > node_rows || col_begins.back() > node_cols )
+		throw std::runtime_error( "Partition value(s) out of bounds." );
+	if( !all_of( row_parts.begin(), row_parts.end(), [node_rows,block_size](std::size_t i){ return on_block_boundary( block_size, node_rows, i ); } ) )
+		throw std::runtime_error( "Row partition point(s) are unaligned with block boundaries." );
+	if( !all_of( col_parts.begin(), col_parts.end(), [node_cols,block_size](std::size_t i){ return on_block_boundary( block_size, node_cols, i ); } ) )
+		throw std::runtime_error( "Col partition point(s) are unaligned with block boundaries." );
+	
+	// add 0 and end if not present
+	if( row_parts.front() != 0 )
+		row_parts.insert( row_parts.begin(), 0 );
+	if( row_parts.back() != node_rows )
+		row_parts.push_back( node_rows );
+	if( col_parts.front() != 0 )
+		col_parts.insert( col_parts.begin(), 0 );
+	if( col_parts.back() != node_cols )
+		col_parts.push_back( node_cols );
+	
+	connectivity[ node._node_index ] = MatrixData<std::size_t>( row_parts.size()-1, col_parts.size()-1 );
+	types[ node._node_index ] = BlockType::H;
+	
+	for( std::size_t i=0; i<row_parts.size()-1; ++i ){
+		for( std::size_t j=0; j<col_parts.size()-1; ++j ){
+			std::size_t n_rows = row_begins[i+1]-row_begins[i];
+			std::size_t n_cols = col_begins[j+1]-col_begins[j];
+			
+			// create new zero block
+			connectivity.emplace_back();
+			types.push_back( BlockType::Zero );
+			node_rows.push_back( n_rows );
+			node_cols.push_back( n_cols );
+			
+			// add edge to new child block
+			connectivity[ node._node_index ].at( i, j ) = connectivity.size()-1;
+		}
+	}
+}
+
+
+TreeIterator hMatrix::insert_dense( const TreeIterator& node ){
+	// TODO Validate iterator
+	types[ node._node_index ] = BlockType::Dense;
+}
+TreeIterator hMatrix::insert_lowrank( const TreeIterator& node ){
+	// TODO Validate iterator
+	types[ node._node_index ] = BlockType::LowRank;
+}
+
+TreeIterator hMatrix::insert_dense( const TreeIterator& node, const MatrixData<Scalar>& D ){
+	insert_dense( node );
+	matrices.emplace_back( D );
+	connectivity[ node._node_index ] = MatrixData<std::size_t>( 1,1 );
+	connectivity[ node._node_index ].at( 0,0 ) = matrices.size()-1 ;
+}
+TreeIterator hMatrix::insert_lowrank( const TreeIterator& node, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R ){
+	insert_lowrank( node );
+	matrices.emplace_back( L );
+	matrices.emplace_back( R );
+	connectivity[ node._node_index ] = MatrixData<std::size_t>( 1,2 );
+	connectivity[ node._node_index ].at( 0,0 ) = matrices.size()-2 ;
+	connectivity[ node._node_index ].at( 0,1 ) = matrices.size()-1 ;
+}
+
+		
+TreeIterator hMatrix::get_child( const TreeIterator& node, std::size_t i, std::size_t j ){
+	// TODO Validate iterator
+	
+	// ensure is an H node XXX need block_type()
+	
+	// ensure i,j are in bounds
+	
+	return TreeIterator( this, connectivity[node._node_index].at(i,j) );
+}
+
+
+		
+std::vector<std::size_t> hMatrix::get_row_bounds( const TreeIterator& node ){
+	std::vector<std::size_t> bounds;
+	
+	if( block_type( node ) == BlockType::H )
+	{
+		std::size_t n_children = nrow_children( node );
+		bounds.resize( n_children + 1 );
+		bounds[0] = 0;
+		for( std:size_t i=0; i<n_children; ++i ){
+			TreeIterator child = get_child( node, i, 0 );
+			bounds[i+1] = bounds[i] + nrows( child );
+		}
+	}
+	else 
+	{
+		bounds = { 0, nrows( node ) };
+	}
+	return bounds;
+}
+
+std::vector<std::size_t> hMatrix::get_col_bounds( const TreeIterator& node ){
+	std::vector<std::size_t> bounds;
+	
+	if( block_type( node ) == BlockType::H )
+	{
+		std::size_t n_children = ncol_children( node );
+		bounds.resize( n_children + 1 );
+		bounds[0] = 0;
+		for( std:size_t i=0; i<n_children; ++i ){
+			TreeIterator child = get_child( node, 0, i );
+			bounds[i+1] = bounds[i] + ncols( child );
+		}
+	}
+	else 
+	{
+		bounds = { 0, ncols( node ) };
+	}
+	return bounds;
+}
 
 
 
@@ -252,6 +396,8 @@ struct MatrixData {
 		int _ld;
 	
 	public:
+		MatrixData() : _nrows(0), _ncols(0), _begin_offset(0), _layout(COL_MAJOR), _ld(0), _data(nullptr) {}
+		
 		MatrixData( int rows, int cols ) : _nrows(nrows), _ncols(ncols), _begin_offset(0), _layout(COL_MAJOR), _ld(nrows) {
 			data = make_shared<Scalar>( _nrows*_ncols );
 		}
