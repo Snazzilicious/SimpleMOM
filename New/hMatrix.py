@@ -25,45 +25,40 @@ class TreeIterator :
 	def shape( self ):
 		return self._parent_matrix.shape( self )
 	
-	def block_type( self ):
-		return self._parent_matrix.block_type( self )
-	
 	def root_slice( self ):
 		(nr,nc) = self.shape
 		return self.slice( 0, nr, 0, nc )
 
-	def partition( self, row_parts, col_parts ):
-		self._parent_matrix.partition( self, row_parts, col_parts )
-	
-	def insert_dense( self ):
-		self._parent_matrix.insert_dense( self )
-	
-	def insert_lowrank( self, node ):
-		self._parent_matrix.insert_lowrank( self )
-	
-	def insert_dense( self, node, D ):
-		self._parent_matrix.insert_dense( self, D )
-	
-	def insert_lowrank( self, node, L, R ):
-		self._parent_matrix.insert_lowrank( self, L, R )
-	
-	def children_shape( self ):
-		return self._parent_matrix.children_shape( self )
-	
-	def get_child( self, i, j ):
-		return self._parent_matrix.children_shape
-	
+	# pass self to corresponding method of _parent_matrix
 	def __getattr__( self, attr ):
 		return lambda *args, **kwargs : getattr( self.s, attr )( self, *args, **kwargs )
 		
 		
-	
-	
-	
-	
-	
 
 class Slice :
+	def __init__( self, parent_matrix, row_begin, row_end, col_begin, col_end ):
+		self._parent_node = parent_matrix
+		self._row_begin = row_begin
+		self._row_end = row_end
+		self._col_begin = col_begin
+		self._col_end = col_end
+	
+	@property
+	def shape( self ):
+		return ( self._row_end-self._row_begin, self._col_end-self._col_begin )
+	
+	def block_type( self ):
+		return self._parent_node.block_type()
+	
+	def get_row_bounds( self ):
+		return self._parent_node._parent_matrix.get_row_bounds( self )
+	
+	def get_col_bounds( self ):
+		return self._parent_node._parent_matrix.get_col_bounds( self )
+	
+	def slice( self, row_begin, row_end, col_begin, col_end ):
+		return self._parent_node._parent_matrix.slice( self, row_begin, row_end, col_begin, col_end )
+
 
 
 
@@ -194,10 +189,9 @@ class hMatrix :
 			
 		else:
 			parent_bounds = self.get_row_bounds( subtree._parent_node )
-			bounds = np.array( [subtree.rbegin] + [i for i in parent_bounds if subtree.rbegin < i < subtree.rend] + [subtree.rend] )
-			return bounds - subtree.rbegin
+			bounds = np.array( [subtree._row_begin] + [i for i in parent_bounds if subtree._row_begin < i < subtree._row_end] + [subtree._row_end] )
+			return bounds - subtree._row_begin
 			
-	
 	def get_col_bounds( self, subtree ):
 		if isinstance( subtree, TreeIterator ):
 			
@@ -209,8 +203,8 @@ class hMatrix :
 		
 		else:
 			parent_bounds = self.get_col_bounds( subtree._parent_node )
-			bounds = np.array( [subtree.cbegin] + [i for i in parent_bounds if subtree.cbegin < i < subtree.cend] + [subtree.cend] )
-			return bounds - subtree.cbegin
+			bounds = np.array( [subtree._col_begin] + [i for i in parent_bounds if subtree._col_begin < i < subtree._col_end] + [subtree._col_end] )
+			return bounds - subtree._col_begin
 	
 	def slice( self, subtree, row_begin, row_end, col_begin, col_end ):
 		if isinstance( subtree, TreeIterator ):
@@ -239,10 +233,10 @@ class hMatrix :
 			return Slice( node, row_begin, row_end, col_begin, col_end )
 		
 		else:
-			row_begin += subtree.rbegin
-			row_end += subtree.rbegin
-			col_begin += subtree.cbegin
-			col_end += subtree.cbegin
+			row_begin += subtree._row_begin
+			row_end += subtree._row_begin
+			col_begin += subtree._col_begin
+			col_end += subtree._col_begin
 			self.slice( subtree._parent_node, row_begin, row_end, col_begin, col_end )
 		
 	
