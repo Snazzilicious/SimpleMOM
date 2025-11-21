@@ -12,6 +12,70 @@
 #    rSVD
 # Tri Solves
 
+
+class hMatrix :
+	def __init__( self, n_rows, n_cols, min_block_size=256 ):
+		self._min_block_size = min_block_size
+		
+		self._connectivity = [None]
+		self._types = ["Zero"]
+		self._shapes = [ (n_rows,n_cols) ]
+	
+	'''Block boundary routines
+	'''
+	def num_blocks( min_block_size, length ):
+		return max( 1, length / min_block_size )
+	
+	def block_size( min_block_size, length, block_index ):
+		if min_block_size < length :
+			return length
+		remainder = length % min_block_size
+		return min_block_size + ( block_index < remainder )
+	
+	def block_index( min_block_size, length, position ):
+		remainder = length % min_block_size
+		position_part1 = min( position, remainder * (min_block_size+1) )
+		position_part2 = position - position_part1
+		return ( position_part1 / (min_block_size+1) ) + ( position_part2 / min_block_size )
+	
+	def block_begin( min_block_size, length, block_index ):
+		remainder = length % min_block_size
+		return min_block_size * block_index + min( remainder, block_index ).
+	
+	def on_block_boundary( min_block_size, length, position ):
+		if position == length :
+			return True
+		index = block_index( min_block_size, length, position )
+		return position == block_begin( min_block_size, length, index )
+	
+	@property
+	def shape( self ):
+		return self._shapes[0]
+	
+	@property
+	def min_block_size( self ):
+		return self._min_block_size
+	
+	def root_node( self ):
+		return TreeIterator( self, 0 )
+		
+	def root_slice( self ):
+		(nr,nc) = self.shape
+		return Slice( self.root_node(), 0, nr, 0, nc )
+	
+	def shape( self, node ):
+		return self._shapes[ node._node_index ]
+	
+	def block_type( self, node ):
+		return self._types[ node._node_index ]
+	
+	
+	
+	
+}
+
+
+
 def index_to_limits( ind, n ):
 	if isinstance( ind, slice ):
 		if ind.step is not None:

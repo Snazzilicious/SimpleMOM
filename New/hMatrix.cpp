@@ -180,7 +180,7 @@ static std::size_t hMatrix::block_size( std::size_t min_block_size, std::size_t 
 	
 	std::size_t remainder = length % min_block_size ;
 	
-	return block_size + std::static_cast<std::size_t>( block_index < remainder );
+	return min_block_size + std::static_cast<std::size_t>( block_index < remainder );
 }
 
 static bool hMatrix::block_index( std::size_t min_block_size, std::size_t length, std::size_t position )
@@ -336,13 +336,13 @@ TreeIterator hMatrix::insert_lowrank( const TreeIterator& node ){
 
 TreeIterator hMatrix::insert_dense( const TreeIterator& node, const MatrixData<Scalar>& D ){
 	insert_dense( node );
-	matrices.emplace_back( D );
+	matrices.emplace_back( D ); // TODO check dimensions
 	connectivity[ node._node_index ] = MatrixData<std::size_t>( 1,1 );
 	connectivity[ node._node_index ].at( 0,0 ) = matrices.size()-1 ;
 }
 TreeIterator hMatrix::insert_lowrank( const TreeIterator& node, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R ){
 	insert_lowrank( node );
-	matrices.emplace_back( L );
+	matrices.emplace_back( L ); // TODO check these dimensions
 	matrices.emplace_back( R );
 	connectivity[ node._node_index ] = MatrixData<std::size_t>( 1,2 );
 	connectivity[ node._node_index ].at( 0,0 ) = matrices.size()-2 ;
