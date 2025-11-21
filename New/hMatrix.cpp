@@ -274,8 +274,8 @@ void hMatrix::partition( const TreeIterator& node, std::vector<std::size_t>& row
 {
 	validate_iterator( node );
 	
-	std::size_t node_rows = this->nrows( node );
-	std::size_t node_cols = this->ncols( node );
+	std::size_t n_rows = this->nrows( node );
+	std::size_t n_cols = this->ncols( node );
 	std::size_t block_size = this->min_block_size();
 	
 	// ensure this is a zero block
@@ -287,22 +287,22 @@ void hMatrix::partition( const TreeIterator& node, std::vector<std::size_t>& row
 		throw std::runtime_error( "Row partition points are unsorted." );
 	if( !std::is_sorted( col_parts.begin(), col_parts.end() ) )
 		throw std::runtime_error( "Col partition points are unsorted." );
-	if( row_begins.back() > node_rows || col_begins.back() > node_cols )
+	if( row_begins.back() > n_rows || col_begins.back() > n_cols )
 		throw std::runtime_error( "Partition value(s) out of bounds." );
-	if( !all_of( row_parts.begin(), row_parts.end(), [node_rows,block_size](std::size_t i){ return on_block_boundary( block_size, node_rows, i ); } ) )
+	if( !all_of( row_parts.begin(), row_parts.end(), [n_rows,block_size](std::size_t i){ return on_block_boundary( block_size, n_rows, i ); } ) )
 		throw std::runtime_error( "Row partition point(s) are unaligned with block boundaries." );
-	if( !all_of( col_parts.begin(), col_parts.end(), [node_cols,block_size](std::size_t i){ return on_block_boundary( block_size, node_cols, i ); } ) )
+	if( !all_of( col_parts.begin(), col_parts.end(), [n_cols,block_size](std::size_t i){ return on_block_boundary( block_size, n_cols, i ); } ) )
 		throw std::runtime_error( "Col partition point(s) are unaligned with block boundaries." );
 	
 	// add 0 and end if not present
 	if( row_parts.front() != 0 )
 		row_parts.insert( row_parts.begin(), 0 );
-	if( row_parts.back() != node_rows )
-		row_parts.push_back( node_rows );
+	if( row_parts.back() != n_rows )
+		row_parts.push_back( n_rows );
 	if( col_parts.front() != 0 )
 		col_parts.insert( col_parts.begin(), 0 );
-	if( col_parts.back() != node_cols )
-		col_parts.push_back( node_cols );
+	if( col_parts.back() != n_cols )
+		col_parts.push_back( n_cols );
 	
 	connectivity[ node._node_index ] = MatrixData<std::size_t>( row_parts.size()-1, col_parts.size()-1 );
 	types[ node._node_index ] = BlockType::H;
@@ -453,6 +453,8 @@ Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t 
 	validate_iterator( start_node );
 	
 	check_slice_limits( row_begin, row_end, col_begin, col_end, this->nrows(), this->ncols() );
+	
+	// TODO ensure on block boundaries
 	
 	TreeIterator node = start_node;
 	bool fits_in_child = true;

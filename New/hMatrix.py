@@ -12,6 +12,16 @@
 #    rSVD
 # Tri Solves
 
+# error checking
+	# including indices >= 0
+# vectorizing block boundary routines
+
+class TreeIterator :
+
+
+class Slice :
+
+
 
 class hMatrix :
 	def __init__( self, n_rows, n_cols, min_block_size=256 ):
@@ -48,6 +58,8 @@ class hMatrix :
 		index = block_index( min_block_size, length, position )
 		return position == block_begin( min_block_size, length, index )
 	
+	"""Instance methods
+	"""
 	@property
 	def shape( self ):
 		return self._shapes[0]
@@ -69,10 +81,129 @@ class hMatrix :
 	def block_type( self, node ):
 		return self._types[ node._node_index ]
 	
+	"""Tree construction routines
+	"""
+	def partition( self, node, row_parts, col_parts ):
+		nrows,ncols = self.shape( node )
+		block_size = self.min_block_size()
+		
+		if 0 not in row_parts :
+			row_parts.insert( 0, 0 )
+		if nrows not in row_parts :
+			row_parts.append( nrows )
+		if 0 not in col_parts :
+			col_parts.insert( 0, 0 )
+		if ncols not in col_parts :
+			col_parts.append( ncols )
 	
+		connectivity[ node._node_index ] = np.array( ( len(row_parts)-1, len(col_parts)-1 ), dtype=np.uint64 )
+		types[ node._node_index ] = "H";
+		
+		for i,(row_begin,row_end) in enumerate(zip( row_parts[:-1], row_parts[1:] )):
+			for j,(col_begin,col_end) in enumerate(zip( col_parts[:-1], col_parts[1:] )):
+				nrows = row_end-row_begin
+				ncols = col_end-col_begin
+			
+				# create new zero block
+				self._connectivity.append(None)
+				self._types.push_back( "Zero" )
+				self._shapes.append( (nrows,ncols) )
+			
+				# add edge to new child block
+				connectivity[ node._node_index ][ i, j ] = len(connectivity)-1
 	
+	def insert_dense( self, node ):
+		self._types[ node._node_index ] = "Dense"
 	
-}
+	def insert_lowrank( self, node ):
+		self._types[ node._node_index ] = "LowRank"
+	
+	def insert_dense( self, node, D ):
+		self.insert_dense( node )
+		self._matrices.append( D )
+		self._connectivity[ node._node_index ] = np.array( (1,1), dtype=np.uint64 )
+		self._connectivity[ node._node_index ][0,0] = len(self._matrices)-1
+	
+	def insert_lowrank( self, node, L, R ):
+		self.insert_lowrank( node )
+		self._matrices.append( L )
+		self._matrices.append( R )
+		self._connectivity[ node._node_index ] = np.array( (1,2), dtype=np.uint64 )
+		self._connectivity[ node._node_index ][0,0] = len(self._matrices)-2
+		self._connectivity[ node._node_index ][0,1] = len(self._matrices)-1
+	
+	"""Tree traversal routines
+	"""
+	def n_children( self, node ):
+		return connectivity[ node._node_index ].shape
+	
+	def get_child( self, node, i, j ):
+		return TreeIterator( self, self.connectivity[ node._node_index ][i,j] )
+	
+	def get_row_bounds( self, subtree ):
+		if isinstance( subtree, TreeIterator ):
+		
+			nchild = self.n_children( subtree )[0]
+			bounds = np.zeros(nchild+1)
+			for i in range(nchild):
+				bounds[i+1] = bounds[i] + self.shape( self.get_child( subtree, i, 0 ) )[0]
+			return bounds
+			
+		else:
+			parent_bounds = self.get_row_bounds( subtree._parent_node )
+			bounds = np.array( [subtree.rbegin] + [i for i in parent_bounds if subtree.rbegin < i < subtree.rend] + [subtree.rend] )
+			return bounds - subtree.rbegin
+			
+	
+	def get_col_bounds( self, subtree ):
+		if isinstance( subtree, TreeIterator ):
+			
+			nchild = self.n_children( subtree )[1]
+			bounds = np.zeros(nchild+1)
+			for i in range(nchild):
+				bounds[i+1] = bounds[i] + self.shape( self.get_child( subtree, 0, i ) )[1]
+			return bounds
+		
+		else:
+			parent_bounds = self.get_col_bounds( subtree._parent_node )
+			bounds = np.array( [subtree.cbegin] + [i for i in parent_bounds if subtree.cbegin < i < subtree.cend] + [subtree.cend] )
+			return bounds - subtree.cbegin
+	
+	def slice( self, subtree, row_begin, row_end, col_begin, col_end ):
+		if isinstance( subtree, TreeIterator ):
+			
+			node = subtree
+			fits_in_child = True
+			while fits_in_child and self.block_type( node ) == "H" :
+				row_bounds = self.get_row_bounds( node )
+				col_bounds = self.get_col_bounds( node )
+				
+				# find first child intersected by slice
+				row_block = np.searchsorted( row_bounds, row_begin, side='right' )-1
+				col_block = np.searchsorted( col_bounds, col_begin, side='right' )-1
+			
+				fits_in_child = row_end <= row_bounds[row_block+1] and col_end <= col_bounds[col_block+1]
+				
+				if fits_in_child :
+					row_begin -= row_bounds[row_block]
+					row_end -= row_bounds[row_block]
+					col_begin -= col_bounds[col_block]
+					col_end -= col_bounds[col_block]
+					
+					node = self.get_child( node, row_block, col_block )
+				
+			return Slice( node, row_begin, row_end, col_begin, col_end )
+		
+		else:
+			row_begin += subtree.rbegin
+			row_end += subtree.rbegin
+			col_begin += subtree.cbegin
+			col_end += subtree.cbegin
+			self.slice( subtree._parent_node, row_begin, row_end, col_begin, col_end )
+		
+	
+		
+# END hMatrix
 
 
 
