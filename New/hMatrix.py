@@ -17,7 +17,51 @@
 # vectorizing block boundary routines
 
 class TreeIterator :
+	def __init__( self, parent_matrix, node_index ):
+		self._parent_matrix = parent_matrix
+		self._node_index = node_index
+	
+	@property
+	def shape( self ):
+		return self._parent_matrix.shape( self )
+	
+	def block_type( self ):
+		return self._parent_matrix.block_type( self )
+	
+	def root_slice( self ):
+		(nr,nc) = self.shape
+		return self.slice( 0, nr, 0, nc )
 
+	def partition( self, row_parts, col_parts ):
+		self._parent_matrix.partition( self, row_parts, col_parts )
+	
+	def insert_dense( self ):
+		self._parent_matrix.insert_dense( self )
+	
+	def insert_lowrank( self, node ):
+		self._parent_matrix.insert_lowrank( self )
+	
+	def insert_dense( self, node, D ):
+		self._parent_matrix.insert_dense( self, D )
+	
+	def insert_lowrank( self, node, L, R ):
+		self._parent_matrix.insert_lowrank( self, L, R )
+	
+	def children_shape( self ):
+		return self._parent_matrix.children_shape( self )
+	
+	def get_child( self, i, j ):
+		return self._parent_matrix.children_shape
+	
+	def __getattr__( self, attr ):
+		return lambda *args, **kwargs : getattr( self.s, attr )( self, *args, **kwargs )
+		
+		
+	
+	
+	
+	
+	
 
 class Slice :
 
@@ -64,7 +108,6 @@ class hMatrix :
 	def shape( self ):
 		return self._shapes[0]
 	
-	@property
 	def min_block_size( self ):
 		return self._min_block_size
 	
@@ -134,7 +177,7 @@ class hMatrix :
 	
 	"""Tree traversal routines
 	"""
-	def n_children( self, node ):
+	def children_shape( self, node ):
 		return connectivity[ node._node_index ].shape
 	
 	def get_child( self, node, i, j ):
@@ -143,7 +186,7 @@ class hMatrix :
 	def get_row_bounds( self, subtree ):
 		if isinstance( subtree, TreeIterator ):
 		
-			nchild = self.n_children( subtree )[0]
+			nchild = self.children_shape( subtree )[0]
 			bounds = np.zeros(nchild+1)
 			for i in range(nchild):
 				bounds[i+1] = bounds[i] + self.shape( self.get_child( subtree, i, 0 ) )[0]
@@ -158,7 +201,7 @@ class hMatrix :
 	def get_col_bounds( self, subtree ):
 		if isinstance( subtree, TreeIterator ):
 			
-			nchild = self.n_children( subtree )[1]
+			nchild = self.children_shape( subtree )[1]
 			bounds = np.zeros(nchild+1)
 			for i in range(nchild):
 				bounds[i+1] = bounds[i] + self.shape( self.get_child( subtree, 0, i ) )[1]
@@ -172,6 +215,7 @@ class hMatrix :
 	def slice( self, subtree, row_begin, row_end, col_begin, col_end ):
 		if isinstance( subtree, TreeIterator ):
 			
+			# find lowest node in tree which contains the whole slice
 			node = subtree
 			fits_in_child = True
 			while fits_in_child and self.block_type( node ) == "H" :
