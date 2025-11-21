@@ -1,18 +1,5 @@
 
 // TODO
-// Leaf blocks - template on type
-//    slice these
-// Set item
-//    matrix data insert vs hierarchy insert
-//    need to identify and replace leaf nodes
-//    LR should check if has same dataset, maybe
-//    Hierarchy will not change in any routine
-// types for OOC and distributed matrices need to all be mutually disjoint, or need to be different node types
-// Constructing hMatrices
-//    Assigning matrix data to Dense and Low rank blocks
-//    concatenation
-// come up with container for nodes
-//    and replace node ptrs with iterators
 // OOC variants
 //    may want to generalize Slice to avoid duplication
 //    this could be at python level
@@ -95,8 +82,16 @@ class hMatrix {
 		Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		Slice slice( const Slice& submat, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
+		// TODO
+		MatrixData<Scalar> get_dense_data( const TreeIterator& node );
+		std::pair<MatrixData<Scalar>,MatrixData<Scalar>> get_lowrank_data( const TreeIterator& node );
+		MatrixData<Scalar> get_dense_data( const Slice& submat );
+		std::pair<MatrixData<Scalar>,MatrixData<Scalar>> get_lowrank_data( const Slice& submat );
+		
 		void plus_assign( const Slice& submat, const MatrixData<Scalar>& D ); // TODO
 		void plus_assign( const Slice& submat, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R ); // TODO
+		
+		void serialize( char* buf ); // TODO
 		
 		hMatrix change_min_block_size( std::size_t new_min_block_size ); // TODO check if new size is compatible
 }
@@ -109,7 +104,7 @@ class hMatrix::TreeIterator {
 		
 		TreeIterator( hMatrix *parent_matrix, std::size_t node_ID );
 	
-	public:		
+	public:
 		std::size_t nrows();
 		std::size_t ncols();
 		BlockType block_type();
@@ -145,6 +140,7 @@ class hMatrix::Slice {
 		Slice( TreeIterator node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
 	public:
+		TreeIterator get_node();
 		std::size_t nrows();
 		std::size_t ncols();
 		BlockType block_type();
@@ -541,6 +537,8 @@ Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, 
 
 hMatrix::Slice::Slice( TreeIterator node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
 	: parent_node(node), rbegin(row_begin), rend(row_end), cbegin(col_begin), cend(col_end) {}
+
+TreeIterator get_node(){ return parent_node; }
 
 // These mostly just call the parent matrix's routine with *this passed in
 
