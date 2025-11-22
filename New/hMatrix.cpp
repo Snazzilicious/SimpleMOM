@@ -17,6 +17,10 @@
 // rSVD
 	// d, lr
 
+// maybe Slice should be completely self sufficient, since it's supposed to act like a complete matrix itself
+// hMatrix methods should only take a TreeIterator
+// Yes I like this - see python
+
 template<typename Scalar>
 class hMatrix {
 	private:
@@ -53,7 +57,6 @@ class hMatrix {
 		Slice root_slice();
 		
 		void validate_iterator( const TreeIterator& node );
-		void validate_slice( const Slice& submat );
 		
 		std::size_t nrows( const TreeIterator& node );
 		std::size_t ncols( const TreeIterator& node );
@@ -75,25 +78,17 @@ class hMatrix {
 		std::vector<std::size_t> get_row_bounds( const TreeIterator& node );
 		std::vector<std::size_t> get_col_bounds( const TreeIterator& node );
 		static std::vector<std::size_t> bounds_in_range( const std::vector<std::size_t>& bounds, std::size_t begin, std::size_t end );
-		std::vector<std::size_t> get_row_bounds( const Slice& submat );
-		std::vector<std::size_t> get_col_bounds( const Slice& submat );
 		
 		// must be on block boundaries
 		Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
-		Slice slice( const Slice& submat, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
 		// TODO
 		MatrixData<Scalar> get_dense_data( const TreeIterator& node );
 		std::pair<MatrixData<Scalar>,MatrixData<Scalar>> get_lowrank_data( const TreeIterator& node );
-		MatrixData<Scalar> get_dense_data( const Slice& submat );
-		std::pair<MatrixData<Scalar>,MatrixData<Scalar>> get_lowrank_data( const Slice& submat );
-		
-		void plus_assign( const Slice& submat, const MatrixData<Scalar>& D ); // TODO
-		void plus_assign( const Slice& submat, const MatrixData<Scalar>& L, const MatrixData<Scalar>& R ); // TODO
 		
 		void serialize( char* buf ); // TODO
 		
-		hMatrix change_min_block_size( std::size_t new_min_block_size ); // TODO check if new size is compatible
+		hMatrix change_min_block_size( std::size_t new_min_block_size ); // TODO check if new size is compatible before changing ... maybe
 }
 
 
@@ -151,8 +146,13 @@ class hMatrix::Slice {
 		// must be on block boundaries
 		Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end );
 		
+		// TODO
 		void plus_assign( const MatrixData<Scalar>& D );
 		void plus_assign( const MatrixData<Scalar>& L, const MatrixData<Scalar>& R );
+		
+		// TODO
+		MatrixData<Scalar> get_dense_data();
+		std::pair<MatrixData<Scalar>,MatrixData<Scalar>> get_lowrank_data();
 }
 
 
@@ -418,35 +418,6 @@ std::vector<std::size_t> hMatrix::get_col_bounds( const TreeIterator& node ){
 }
 
 
-std::vector<std::size_t> hMatrix::bounds_in_range( const std::vector<std::size_t>& bounds, std::size_t begin, std::size_t end )
-{
-	auto in_range_comp = [begin,end]( std::size_t v ){ return begin < v && v < end; };
-	
-	auto n_bounds = std::count_if( bounds.begin(), bounds.end(), in_range_comp );
-	
-	n_bounds += 2;
-	std::vector<std::size_t> in_range_bounds( n_bounds, 0 );
-	in_range_bounds[ n_bounds-1 ] = end;
-	
-	std::copy_if( bounds.begin(), bounds.end(), in_range_bounds.begin(), in_range_comp );
-	
-	return in_range_bounds;
-}
-
-
-std::vector<std::size_t> get_row_bounds( const Slice& submat ){
-	validate_slice( submat );
-	auto row_bounds = get_row_bounds( submat.parent_node );
-	return bounds_in_range( row_bounds, submat.rbegin, submat.rend );
-}
-
-std::vector<std::size_t> get_col_bounds( const Slice& submat )
-	validate_slice( submat );
-	auto col_bounds = get_col_bounds( submat.parent_node );
-	return bounds_in_range( col_bounds, submat.cbegin, submat.cend );
-}
-
-
 
 // find lowest node in the tree which completely contains the slice
 Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
@@ -490,11 +461,6 @@ Slice slice( const TreeIterator& start_node, std::size_t row_begin, std::size_t 
 	}
 	
 	return Slice( node, row_begin, row_end, col_begin, col_end );
-}
-
-Slice slice( const Slice& submat, std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
-	validate_slice( submat );
-	return slice( submat.parent_node, row_begin+submat.rbegin, row_end+submat.rbegin, col_begin+submat.cbegin, col_end+submat.cbegin );
 }
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -544,22 +510,43 @@ TreeIterator get_node(){ return parent_node; }
 
 // These mostly just call the parent matrix's routine with *this passed in
 
-std::size_t nrows(){ return rend-rbegin; }
-std::size_t ncols(){ return cend-cbegin; }
-BlockType block_type(){ return parent_node.block_type(); }
+std::size_t Slice::nrows(){ return rend-rbegin; }
+std::size_t Slice::ncols(){ return cend-cbegin; }
+BlockType Slice::block_type(){ return parent_node.block_type(); }
 
-std::vector<std::size_t> get_row_bounds(){ return parent_node.parent_matrix->get_row_bounds( *this ); }
-std::vector<std::size_t> get_col_bounds(){ return parent_node.parent_matrix->get_col_bounds( *this ); }
 
-Slice slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end )
+std::vector<std::size_t> bounds_in_range( const std::vector<std::size_t>& bounds, std::size_t begin, std::size_t end )
 {
-	return parent_node.parent_matrix->slice( *this, row_begin, row_end, col_begin, col_end );
+	auto in_range_comp = [begin,end]( std::size_t v ){ return begin < v && v < end; };
+	
+	auto n_bounds = std::count_if( bounds.begin(), bounds.end(), in_range_comp );
+	
+	n_bounds += 2;
+	std::vector<std::size_t> in_range_bounds( n_bounds, 0 );
+	in_range_bounds[ n_bounds-1 ] = end;
+	
+	std::copy_if( bounds.begin(), bounds.end(), in_range_bounds.begin(), in_range_comp );
+	
+	return in_range_bounds;
+}
+
+
+std::vector<std::size_t> Slice::get_row_bounds(){
+	auto row_bounds = parent_node.get_row_bounds();
+	return bounds_in_range( row_bounds, rbegin, rend );
+}
+
+std::vector<std::size_t> Slice::get_col_bounds()
+	auto col_bounds = parent_node.get_col_bounds();
+	return bounds_in_range( col_bounds, cbegin, cend );
+}
+
+Slice Slice::slice( std::size_t row_begin, std::size_t row_end, std::size_t col_begin, std::size_t col_end ){
+	return parent_node.slice( row_begin+rbegin, row_end+rbegin, col_begin+cbegin, col_end+cbegin );
 }
 
 void plus_assign( const MatrixData<Scalar>& D ){ return parent_node.parent_matrix->plus_assign( *this, D ); }
 void plus_assign( const MatrixData<Scalar>& L, const MatrixData<Scalar>& R ){ return parent_node.parent_matrix->plus_assign( *this, L, R ); }
-
-
 
 
 
