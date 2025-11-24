@@ -63,7 +63,6 @@ class hMatrix {
 		BlockType block_type( const TreeIterator& node );
 		
 		// Main tree construction routines
-		void partition( const TreeIterator& node, const std::vector<std::size_t>& row_parts, const std::vector<std::size_t>& col_parts );
 		void partition( const TreeIterator& node, std::vector<std::size_t>& row_parts, std::vector<std::size_t>& col_parts );
 		TreeIterator insert_dense( const TreeIterator& node );
 		TreeIterator insert_lowrank( const TreeIterator& node );
@@ -265,11 +264,6 @@ BlockType hMatrix::block_type( const TreeIterator& node ){
 }
 
 
-void hMatrix::partition( const TreeIterator& node, const std::vector<std::size_t>& row_parts, const std::vector<std::size_t>& col_parts ){
-	std::vector<std::size_t> row_parts_copy( row_parts );
-	std::vector<std::size_t> col_parts_copy( col_parts );
-	partition( node, row_parts_copy, col_parts_copy );
-}
 void hMatrix::partition( const TreeIterator& node, std::vector<std::size_t>& row_parts, std::vector<std::size_t>& col_parts )
 {
 	validate_iterator( node );
@@ -475,10 +469,6 @@ BlockType hMatrix::TreeIterator::block_type(){ return parent_matrix->block_type(
 
 Slice hMatrix::TreeIterator::root_slice(){ return slice( 0, nrows(), 0, ncols() ); }
 
-void partition( const std::vector<std::size_t>& row_parts, const std::vector<std::size_t>& col_parts )
-{
-	parent_matrix->partition( *this, row_parts, col_parts );
-}
 void partition( std::vector<std::size_t>& row_parts, std::vector<std::size_t>& col_parts )
 {
 	parent_matrix->partition( *this, row_parts, col_parts );
