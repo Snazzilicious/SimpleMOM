@@ -139,6 +139,11 @@ def queue_H_TRSM( side, uplo, piv, A, B ):
 
 def hMatrixTRSM( side, uplo, piv, A, B ):
 	
+	if not side in ["L","R"] :
+		raise ValueError("side must be 'L' or 'R', {side} passed in.")
+	if not uplo in ["L","U"] :
+		raise ValueError("side must be 'L' or 'U', {uplo} passed in.")
+	
 	min_block_size = A.min_block_size()
 	
 	if not A.min_block_size() == B.min_block_size() :
@@ -146,11 +151,16 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 	
 	if A.shape[0] != A.shape[1] :
 		raise ValueError(f"Non-square matrix passed to TRSM {A.shape}")
-	if A.shape[1] != B.shape[0] : # TODO depends on solve side !!!
+	if side == "L" and A.shape[1] != B.shape[0] : # TODO depends on solve side !!!
 		raise ValueError(f"Incompatible matrix dimensions {A.shape} {B.shape}")
+	elif side == "R" and A.shape[0] != B.shape[1]
+		raise ValueError(f"Incompatible matrix dimensions {B.shape} {A.shape}")
 	
-	if 
+	if not A.dtype == B.dtype :
+		raise ValueError(f"Mismatch of dtypes {A.dtype} {B.dtype}")
 	
+	if ( side == "L" and B.shape[1] == 0 ) or ( side == "R" and B.shape[0] == 0 ):
+		return
 	
 	
 	job_stack = [ ("TRSM", piv[:], A[:,:], B[:,:]) ]

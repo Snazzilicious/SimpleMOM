@@ -17,7 +17,7 @@ def rSVD( L, R, max_rank, tol=1e-5 ):
 	
 	return newL, newR
 
-def rSVD( D, max_rank, tol=1e-5 ):
+def dSVD( D, max_rank, tol=1e-5 ):
 	
 	u,s,vh = np.linalg.svd( D )
 	
@@ -32,7 +32,7 @@ def rSVD( D, max_rank, tol=1e-5 ):
 	return newL, newR.copy()
 
 
-def llaxpy( X, Y ): # TODO check for same parent_node
+def llaxpy( X, Y ): # TODO check for same dataset
 	# y <- x + y
 	if X.block_type() == "Zero" :
 		return
@@ -41,8 +41,8 @@ def llaxpy( X, Y ): # TODO check for same parent_node
 	y_rank = Y.rank()
 	x_rank = X.rank()
 	
-	newL = np.zeros(( m, y_rank+x_rank ))
-	newR = np.zeros(( y_rank+x_rank, n ))
+	newL = np.zeros(( m, y_rank+x_rank ), dtype=Y.dtype )
+	newR = np.zeros(( y_rank+x_rank, n ), dtype=Y.dtype )
 	
 	y_node = Y.get_parent()
 	if Y.block_type() == "LowRank" :
@@ -65,10 +65,90 @@ def llaxpy( X, Y ): # TODO check for same parent_node
 	
 
 def Leaf_GEMM( alpha, A, B, C ):
-	# TODO
+
 	type_a = a.block_type()
 	type_b = b.block_type()
 	type_c = c.block_type()
+	
+	if type_c == "Zero" or type_c == "LowRank" :
+		if type_a == "Dense" and type_b == "Dense" :
+			D_a = A.get_dense_data()
+			D_b = B.get_dense_data()
+			
+			tmp = alpha * D_a @ D_b
+			
+			L,R = dSVD( tmp, max_rank, tol )
+		
+		elif type_a == "LowRank" and type_b == "LowRank" :
+			L_a, R_a = A.get_lowrank_data()
+			L_b, R_b = B.get_lowrank_data()
+			
+			tmp1 = alpha * R_a @ L_b
+			
+			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO
+				tmp2 = L_a @ tmp1
+				L = tmp2
+				R = R_b
+				
+			else:
+				tmp2 = tmp1 @ R_b
+				L = L_a
+				R = tmp2
+			
+		else:
+			raise AssertionError(f"Invalid types for A and B with LowRank C: {type_a} {type_b}")
+		
+		wrapper = hMatrix( *(C.shape), C.min_block_size(), C.dtype )
+		wrapper.insert_lowrank( wrapper.root_node(), L, R )
+		llaxpy( wrapper[:,:], C )
+			
+	
+	elif type_c == "Dense" :
+		if type_a == "Dense" and type_b == "Dense" :
+			D_a = A.get_dense_data()
+			D_b = B.get_dense_data()
+			D_c = C.get_dense_data()
+			
+			D_c += alpha * D_a @ D_b
+		
+		elif type_a == "Dense" and type_b == "LowRank" :
+			D_a = A.get_dense_data()
+			L_b, R_b = B.get_lowrank_data()
+			D_c = C.get_dense_data()
+			
+			tmp = alpha * D_a @ L_b
+			D_c += tmp @ R_b
+		
+		elif type_a == "LowRank" and type_b == "Dense" :
+			L_a, R_a = A.get_lowrank_data()
+			D_b = B.get_dense_data()
+			D_c = C.get_dense_data()
+			
+			tmp = alpha * R_a @ D_b
+			D_c += L_b @ tmp
+		
+		elif type_a == "LowRank" and type_b == "LowRank" :
+			L_a, R_a = A.get_lowrank_data()
+			L_b, R_b = B.get_lowrank_data()
+			D_c = C.get_dense_data()
+			
+			tmp1 = alpha * R_a @ L_b
+			
+			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO
+				tmp2 = L_a @ tmp1
+				D_c += tmp2 @ R_b
+			else:
+				tmp2 = tmp1 @ R_b
+				D_c += L_a @ tmp2
+				
+		else:
+			raise AssertionError(f"Invalid types for A and B with Dense C: {type_a} {type_b}")
+		
+	else:
+		raise AssertionError(f"Invalid type for C matrix {type_c}")
+				
+			
+			
 
 
 def LR_to_LR_GEMM( alpha, A, B, C ):
@@ -86,7 +166,7 @@ def LR_to_LR_GEMM( alpha, A, B, C ):
 		new_a.insert_dense( new_a.root_node(), a_right )
 		
 		new_right = hMatrix( r, n, min_block_size )
-		new_right.insert_dense( new_right.root_node(), np.zeros(( r,n )) )
+		new_right.insert_dense( new_right.root_node(), np.zeros( (r,n), dtype=C.dtype ) )
 		
 		hMatrixGEMM( alpha, new_a, B, new_right )
 		
@@ -105,7 +185,7 @@ def LR_to_LR_GEMM( alpha, A, B, C ):
 		new_b.insert_dense( new_b.root_node(), b_left )
 		
 		new_left = hMatrix( m, r, min_block_size )
-		new_left.insert_dense( new_left.root_node(), np.zeros(( m,r )) )
+		new_left.insert_dense( new_left.root_node(), np.zeros( (m,r), dtype=C.dtype ) )
 		
 		hMatrixGEMM( alpha, A, new_b, new_left )
 		
@@ -117,9 +197,9 @@ def LR_to_LR_GEMM( alpha, A, B, C ):
 		
 
 def queue_H_GEMM( A, B, C ):
-	row_bounds = np.union1d( A.row_bounds(), C.row_bounds() )
-	col_bounds = np.union1d( B.col_bounds(), C.col_bounds() )
-	inr_bounds = np.union1d( A.col_bounds(), B.row_bounds() )
+	row_bounds = np.union1d( A.get_row_bounds(), C.get_row_bounds() )
+	col_bounds = np.union1d( B.get_col_bounds(), C.get_col_bounds() )
+	inr_bounds = np.union1d( A.get_col_bounds(), B.get_row_bounds() )
 	
 	jobs=[]
 	for row_begin,row_end in zip(row_bounds[:-1],row_bounds[1:]):
@@ -142,6 +222,9 @@ def hMatrixGEMM( alpha, A, B, C ):
 
 	if A.shape[0] != C.shape[0] or B.shape[1] != C.shape[1] or A.shape[1] != B.shape[0]:
 		raise ValueError(f"Incompatible matrix dimensions: {A.shape}, {B.shape}, {C.shape}")
+	
+	if not A.dtype == B.dtype == C.dtype :
+		raise ValueError(f"Mismatch of dtypes {A.dtype} {B.dtype} {C.dtype}")
 	
 	if C.shape[0] == 0 or C.shape[1] == 0 :
 		return

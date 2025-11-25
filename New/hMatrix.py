@@ -1,18 +1,24 @@
 
 # TODO
 # Constructing hMatrices
-#    todense()
 #    Test construction
 #    Error checking
-#    Vectorize block boundaries
 #    reblockify
 # Support size zero slices
 # GEMM
-#    all leaf combinations
-#        DDD, DDL, DLD, DLL*, LDD, LDL*, LLD, LLL
-#        check for same basis
+#    check for same basis
+#    revise order of low rank products
 # semi-colons
 # use correct type of exceptions
+# Error checking
+# Testing
+	# construction
+	# to dense
+	# rSVD x 2
+	# Leaf GEMM
+	# GEMM
+
+import numpy as np
 
 
 
@@ -22,20 +28,20 @@ def num_blocks( min_block_size, length ):
 	return max( 1, length // min_block_size )
 
 def block_size( min_block_size, length, block_index ):
-	if min_block_size < length :
+	if length < min_block_size :
 		return length
 	remainder = length % min_block_size
 	return min_block_size + ( block_index < remainder )
+
+def block_begin( min_block_size, length, block_index ):
+	remainder = length % min_block_size
+	return min_block_size * block_index + min( remainder, block_index )
 
 def block_index( min_block_size, length, position ):
 	remainder = length % min_block_size
 	position_part1 = min( position, remainder * (min_block_size+1) )
 	position_part2 = position - position_part1
 	return ( position_part1 // (min_block_size+1) ) + ( position_part2 // min_block_size )
-
-def block_begin( min_block_size, length, block_index ):
-	remainder = length % min_block_size
-	return min_block_size * block_index + min( remainder, block_index ).
 
 def on_block_boundary( min_block_size, length, position ):
 	if position == length :
@@ -49,10 +55,10 @@ def get_limits( s, n ):
 	if not isinstance( s, slice ):
 		raise TypeError("hMatrices can only be indexed with slices (':')")
 	
-	if s.start is not None and not -n <= s.start < n :
+	if s.start is not None and not -int(n) <= s.start < n :
 		raise ValueError(f"Start index {s.start} is out of bounds for axis with size {n}")
-	if s.end is not None and not -n < s.end <= n :
-		raise ValueError(f"End index {s.end} is out of bounds for axis with size {n}")
+	if s.stop is not None and not -int(n) < s.stop <= n :
+		raise ValueError(f"End index {s.stop} is out of bounds for axis with size {n}")
 	
 	begin, end, stride = s.indices(n)
 	
@@ -83,6 +89,10 @@ class TreeIterator :
 	def shape( self ):
 		return self._parent_matrix.shape( self )
 	
+	@property
+	def dtype( self ):
+		return self._parent_matrix.dtype
+	
 	def min_block_size( self ):
 		return self._parent_matrix.min_block_size()
 	
@@ -93,7 +103,7 @@ class TreeIterator :
 
 	# pass self to corresponding method of _parent_matrix
 	def __getattr__( self, attr ):
-		return lambda *args, **kwargs : getattr( self.s, attr )( self, *args, **kwargs )
+		return lambda *args, **kwargs : getattr( self._parent_matrix, attr )( self, *args, **kwargs )
 		
 		
 
@@ -112,6 +122,10 @@ class Slice :
 	def shape( self ):
 		return ( self._row_end-self._row_begin, self._col_end-self._col_begin )
 	
+	@property
+	def dtype( self ):
+		return self._parent_node.dtype
+	
 	def rank( self ):
 		return self._parent_node.rank()
 	
@@ -123,12 +137,12 @@ class Slice :
 	
 	def get_row_bounds( self ):
 		parent_bounds = self._parent_node.get_row_bounds()
-		bounds = np.array( [self._row_begin] + [i for i in parent_bounds if self._row_begin < i < self._row_end] + [self._row_end] )
+		bounds = np.array( [self._row_begin] + [i for i in parent_bounds if self._row_begin < i < self._row_end] + [self._row_end], dtype=np.uint64 )
 		return bounds - self._row_begin
 	
 	def get_col_bounds( self ):
 		parent_bounds = self._parent_node.get_col_bounds()
-		bounds = np.array( [self._col_begin] + [i for i in parent_bounds if self._col_begin < i < self._col_end] + [self._col_end] )
+		bounds = np.array( [self._col_begin] + [i for i in parent_bounds if self._col_begin < i < self._col_end] + [self._col_end], dtype=np.uint64 )
 		return bounds - self._col_begin
 	
 	def slice( self, row_begin, row_end, col_begin, col_end ):
@@ -136,7 +150,7 @@ class Slice :
 		row_end += self._row_begin
 		col_begin += self._col_begin
 		col_end += self._col_begin
-		return self._parent_node.slice( self, row_begin, row_end, col_begin, col_end )
+		return self._parent_node.slice( row_begin, row_end, col_begin, col_end )
 	
 	def __getitem__( self, key ):
 		(nr,nc) = self.shape
@@ -155,7 +169,7 @@ class Slice :
 
 
 class hMatrix :
-	def __init__( self, n_rows, n_cols, min_block_size=256 ):
+	def __init__( self, n_rows, n_cols, min_block_size=256, dtype=np.complex128 ):
 		self._min_block_size = min_block_size
 		
 		self._connectivity = [None]
@@ -163,12 +177,19 @@ class hMatrix :
 		self._shapes = [ (n_rows,n_cols) ]
 		self._matrices = []
 		self._free_mat_inds = []
+		self._dtype = dtype
 	
 	"""Instance methods
 	"""
+	def shape( self, node=None ):
+		if node is None:
+			return self.shape( self.root_node() )
+		else:
+			return self._shapes[ node._node_index ]
+
 	@property
-	def shape( self ):
-		return self._shapes[0]
+	def dtype( self ):
+		return self._dtype
 	
 	def min_block_size( self ):
 		return self._min_block_size
@@ -177,12 +198,15 @@ class hMatrix :
 		return TreeIterator( self, 0 )
 		
 	def __getitem__( self, key ):
-		(nr,nc) = self.shape
+		(nr,nc) = self.shape()
 		row_begin, row_end, col_begin, col_end = parse_slice_key( key, nr, nc )
 		return self.slice( self.root_node(), row_begin, row_end, col_begin, col_end )
 	
-	def shape( self, node ):
-		return self._shapes[ node._node_index ]
+	def validate_iterator( self, node ):
+		if not isinstance( node, TreeIterator ):
+			raise TypeError("node reference is not a TreeIterator")
+		if node._parent_matrix is not self:
+			raise ValueError("node is not associated with this hMatrix")
 	
 	def rank( self, node ):
 		btype = self.block_type( node )
@@ -200,11 +224,33 @@ class hMatrix :
 	"""Tree construction routines
 	"""
 	def partition( self, node, row_parts, col_parts ):
-		# TODO validate_iterator
-		# TODO ensure is Zero type node
-		# TODO ensure parts are sorted, in bounds, and on boundaries
+		self.validate_iterator( node )
+		
 		nrows,ncols = self.shape( node )
 		block_size = self.min_block_size()
+		
+		if self.block_type( node ) != "Zero" :
+			raise ValueError("Cannot partition non-Zero node")
+		# check sorted
+		if not all([ v < row_parts[i+1] for i,v in enumerate(row_parts[:-1]) ]) :
+			raise ValueError("Row partitions are not strictly increasing")
+		if not all([ v < col_parts[i+1] for i,v in enumerate(col_parts[:-1]) ]) :
+			raise ValueError("Col partitions are not strictly increasing")
+		# check in bounds
+		if not all([ v >= 0 for v in row_parts ]) :
+			raise ValueError("Row partition point less than 0")
+		if not all([ v <= nrows for v in row_parts ]) :
+			raise ValueError("Row partition point out of bounds")
+		if not all([ v >= 0 for v in col_parts ]) :
+			raise ValueError("Col partition point less than 0")
+		if not all([ v <= ncols for v in col_parts ]) :
+			raise ValueError("Col partition point out of bounds")
+		# check on block boundaries
+		if not all([ on_block_boundary( block_size, nrows, v ) for v in row_parts ]) :
+			raise ValueError("Row partition point not on boundary")
+		if not all([ on_block_boundary( block_size, ncols, v ) for v in col_parts ]) :
+			raise ValueError("Col partition point not on boundary")
+		
 		
 		if 0 not in row_parts :
 			row_parts.insert( 0, 0 )
@@ -215,8 +261,8 @@ class hMatrix :
 		if ncols not in col_parts :
 			col_parts.append( ncols )
 	
-		connectivity[ node._node_index ] = np.array( ( len(row_parts)-1, len(col_parts)-1 ), dtype=np.uint64 )
-		types[ node._node_index ] = "H"
+		self._connectivity[ node._node_index ] = np.zeros( ( len(row_parts)-1, len(col_parts)-1 ), dtype=np.uint64 )
+		self._types[ node._node_index ] = "H"
 		
 		for i,(row_begin,row_end) in enumerate(zip( row_parts[:-1], row_parts[1:] )):
 			for j,(col_begin,col_end) in enumerate(zip( col_parts[:-1], col_parts[1:] )):
@@ -225,14 +271,17 @@ class hMatrix :
 			
 				# create new zero block
 				self._connectivity.append(None)
-				self._types.push_back( "Zero" )
+				self._types.append( "Zero" )
 				self._shapes.append( (nrows,ncols) )
 			
 				# add edge to new child block
-				connectivity[ node._node_index ][ i, j ] = len(connectivity)-1
+				self._connectivity[ node._node_index ][ i, j ] = len(self._connectivity)-1
 	
 	
 	def insert_matrix( self, M ):
+		if M.dtype != self._dtype :
+			raise ValueError(f"cannot insert matrix of type {M.dtype} into hMatrix of type {self._dtype}")
+		
 		if len(self._free_mat_inds) > 0 :
 			ind = self._free_mat_inds.pop(0)
 			self._matrices[ind] = M
@@ -245,75 +294,87 @@ class hMatrix :
 		self._matrices[ind] = None
 		self._free_mat_inds.append(ind)
 	
-	def insert_dense( self, node ):
+	def insert_dense( self, node, D=None ):
+		self.validate_iterator( node )
+		
 		btype = self.block_type( node )
-		if btype != "Zero" and btype != "Dense" :
-			raise ValueError(f"Cannot insert Dense into {btype}")
-		self._types[ node._node_index ] = "Dense"
-	
-	def insert_lowrank( self, node ):
-		btype = self.block_type( node )
-		if btype != "Zero" and btype != "LowRank" :
-			raise ValueError(f"Cannot insert LowRank into {btype}")
-		self._types[ node._node_index ] = "LowRank"
-	
-	def insert_dense( self, node, D ):
-		if self.block_type( node ) == "LowRank": # for converting low rank to dense
+		
+		if btype == "LowRank": # for converting low rank to dense
 			self.remove_matrix( self._connectivity[ node._node_index ][0,0] )
 			self.remove_matrix( self._connectivity[ node._node_index ][0,1] )
 			self._connectivity[ node._node_index ] = None
 			self._types[ node._node_index ] = "Zero"
 		
-		if D.shape != self.shape( node ) :
+		elif btype != "Zero" and btype != "Dense" :
+			raise ValueError(f"Cannot insert Dense into {btype}")
+		
+		if D is not None and D.shape != self.shape( node ) :
 			raise ValueError(f"Matrix D's shape {D.shape} does not match node shape {self.shape(node)}")
-			
-		self.insert_dense( node )
 		
-		if self._connectivity[ node._node_index ] is None :
-			self._connectivity[ node._node_index ] = np.array( (1,1), dtype=np.uint64 )
-			self._connectivity[ node._node_index ][0,0] = self.insert_matrix( D )
-		else:
-			mat_ind = self._connectivity[node._node_index][0,0]
-			self._matrices[mat_ind] = D
+		if D is not None :
+			if self._connectivity[ node._node_index ] is None :
+				mat_ind = self.insert_matrix( D )
+				self._connectivity[ node._node_index ] = np.zeros( (1,1), dtype=np.uint64 )
+				self._connectivity[ node._node_index ][0,0] = mat_ind
+			else:
+				mat_ind = self._connectivity[node._node_index][0,0]
+				self._matrices[mat_ind] = D
+		self._types[ node._node_index ] = "Dense"
 	
-	def insert_lowrank( self, node, L, R ):
-		L_shape = L.shape
-		R_shape = R.shape
-		node_shape = self.shape( node )
-		if L_shape[0] != node_shape[0] or R_shape[1] != node_shape[1] or L_shape[1] != R_shape[0]:
-			raise ValueError(f"Matrix product L{L_shape} R{R_shape}, is invalid for node with shape {node_shape}")
+	def insert_lowrank( self, node, L=None, R=None ):
+		self.validate_iterator( node )
 		
-		self.insert_lowrank( node )
+		btype = self.block_type( node )
 		
-		if self._connectivity[ node._node_index ] is None :
-			self._connectivity[ node._node_index ] = np.array( (1,2), dtype=np.uint64 )
-			self._connectivity[ node._node_index ][0,0] = self.insert_matrix( L )
-			self._connectivity[ node._node_index ][0,1] = self.insert_matrix( R )
-		else:
-			L_ind = self._connectivity[node._node_index][0,0]
-			R_ind = self._connectivity[node._node_index][0,1]
-			self._matrices[L_ind] = L
-			self._matrices[R_ind] = R
+		if btype != "Zero" and btype != "LowRank" :
+			raise ValueError(f"Cannot insert LowRank into {btype}")
+		
+		if L is None ^ R is None :
+			raise ValueError("Must insert both low rank factors")
+		
+		if L is not None :
+			L_shape = L.shape
+			R_shape = R.shape
+			node_shape = self.shape( node )
+			if L_shape[0] != node_shape[0] or R_shape[1] != node_shape[1] or L_shape[1] != R_shape[0]:
+				raise ValueError(f"Matrix product L{L_shape} R{R_shape}, is invalid for node with shape {node_shape}")
+		
+		if L is not None :
+			if self._connectivity[ node._node_index ] is None :
+				L_ind = self.insert_matrix( L )
+				R_ind = self.insert_matrix( R )
+				self._connectivity[ node._node_index ] = np.zeros( (1,2), dtype=np.uint64 )
+				self._connectivity[ node._node_index ][0,:] = [L_ind,R_ind]
+			else:
+				L_ind = self._connectivity[node._node_index][0,0]
+				R_ind = self._connectivity[node._node_index][0,1]
+				self._matrices[L_ind] = L
+				self._matrices[R_ind] = R
+		self._types[ node._node_index ] = "LowRank"
 			
 	
 	"""Tree traversal routines
 	"""
 	def children_shape( self, node ):
-		return connectivity[ node._node_index ].shape
+		return self._connectivity[ node._node_index ].shape
 	
 	def get_child( self, node, i, j ):
-		return TreeIterator( self, self.connectivity[ node._node_index ][i,j] )
+		return TreeIterator( self, self._connectivity[ node._node_index ][i,j] )
 	
 	def get_row_bounds( self, node ):
+		self.validate_iterator( node )
+		
 		nchild = self.children_shape( node )[0]
-		bounds = np.zeros(nchild+1)
+		bounds = np.zeros( nchild+1, dtype=np.uint64 )
 		for i in range(nchild):
 			bounds[i+1] = bounds[i] + self.shape( self.get_child( node, i, 0 ) )[0]
 		return bounds
 			
 	def get_col_bounds( self, node ):
+		self.validate_iterator( node )
+		
 		nchild = self.children_shape( node )[1]
-		bounds = np.zeros(nchild+1)
+		bounds = np.zeros( nchild+1,  dtype=np.uint64 )
 		for i in range(nchild):
 			bounds[i+1] = bounds[i] + self.shape( self.get_child( node, 0, i ) )[1]
 		return bounds
@@ -345,16 +406,18 @@ class hMatrix :
 		if self.block_type( node ) != "Dense" :
 			raise ValueError("Requested dense data from non-Dense node.")
 			
-		i = connectivity[node._node_index][0,0]
-		return self._matrices[i]
+		mat_ind = self._connectivity[node._node_index][0,0]
+		return self._matrices[mat_ind]
 	
 	def get_lowrank_data( self, node ):
 		if self.block_type( node ) != "LowRank" :
 			raise ValueError("Requested low rank data from non-LowRank node.")
 			
-		i_l = self._connectivity[node._node_index][0,0]
-		i_r = self._connectivity[node._node_index][0,1]
-		return ( self._matrices[i_l], self._matrices[i_r] )
-			
-			
-	
+		L_ind = self._connectivity[node._node_index][0,0]
+		R_ind = self._connectivity[node._node_index][0,1]
+		return ( self._matrices[L_ind], self._matrices[R_ind] )
+
+
+
+
+

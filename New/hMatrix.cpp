@@ -174,7 +174,7 @@ static std::size_t hMatrix::block_size( std::size_t min_block_size, std::size_t 
 	if( block_index >= n_blocks )
 		throw std::runtime_error("Index of block for requested size exceeds num blocks.");
 	
-	if( min_block_size < length )
+	if( length < min_block_size )
 		return length;
 	
 	std::size_t remainder = length % min_block_size ;
