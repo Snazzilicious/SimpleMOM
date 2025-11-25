@@ -141,6 +141,18 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 	
 	min_block_size = A.min_block_size()
 	
+	if not A.min_block_size() == B.min_block_size() :
+		raise ValueError("Incompatible min_block_sizes")
+	
+	if A.shape[0] != A.shape[1] :
+		raise ValueError(f"Non-square matrix passed to TRSM {A.shape}")
+	if A.shape[1] != B.shape[0] : # TODO depends on solve side !!!
+		raise ValueError(f"Incompatible matrix dimensions {A.shape} {B.shape}")
+	
+	if 
+	
+	
+	
 	job_stack = [ ("TRSM", piv[:], A[:,:], B[:,:]) ]
 	while len(job_stack) > 0 :
 		
@@ -158,6 +170,8 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 			n = a.shape[0]
 			if n != a.shape[1] :
 				raise ValueError("Non-square block on diagonal")
+			if n != b.shape[0] :
+				raise ValueError(f"Incompatible matrix dimensions {a.shape} {b.shape}")
 			
 			# Trivial case
 			if type_b == "Zero" :

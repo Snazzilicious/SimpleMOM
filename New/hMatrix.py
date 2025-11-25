@@ -8,20 +8,11 @@
 #    reblockify
 # Support size zero slices
 # GEMM
-#    llaxpy
-#    rSVD
 #    all leaf combinations
 #        DDD, DDL, DLD, DLL*, LDD, LDL*, LLD, LLL
 #        check for same basis
-#    Error checking
-#        shapes, block_size
-# TRSM
-#    Error checking
-#        shapes, block_size
-# GETRF
-#    Error checking
-#        shapes, block_size
 # semi-colons
+# use correct type of exceptions
 
 
 
@@ -56,7 +47,7 @@ def on_block_boundary( min_block_size, length, position ):
 def get_limits( s, n ):
 	
 	if not isinstance( s, slice ):
-		raise ValueError("hMatrices can only be indexed with slices (':')")
+		raise TypeError("hMatrices can only be indexed with slices (':')")
 	
 	if s.start is not None and not -n <= s.start < n :
 		raise ValueError(f"Start index {s.start} is out of bounds for axis with size {n}")
@@ -121,6 +112,9 @@ class Slice :
 	def shape( self ):
 		return ( self._row_end-self._row_begin, self._col_end-self._col_begin )
 	
+	def rank( self ):
+		return self._parent_node.rank()
+	
 	def min_block_size( self ):
 		return self._parent_node.min_block_size()
 	
@@ -167,6 +161,8 @@ class hMatrix :
 		self._connectivity = [None]
 		self._types = ["Zero"]
 		self._shapes = [ (n_rows,n_cols) ]
+		self._matrices = []
+		self._free_mat_inds = []
 	
 	"""Instance methods
 	"""
@@ -187,6 +183,16 @@ class hMatrix :
 	
 	def shape( self, node ):
 		return self._shapes[ node._node_index ]
+	
+	def rank( self, node ):
+		btype = self.block_type( node )
+		if btype == "Zero" :
+			return 0
+		elif btype == "LowRank" :
+			L,_ = self.get_lowrank_data( node )
+			return L.shape[1]
+		else:
+			raise ValueError(f"Cannot provide rank of a block of type {btype}")
 	
 	def block_type( self, node ):
 		return self._types[ node._node_index ]
@@ -225,6 +231,20 @@ class hMatrix :
 				# add edge to new child block
 				connectivity[ node._node_index ][ i, j ] = len(connectivity)-1
 	
+	
+	def insert_matrix( self, M ):
+		if len(self._free_mat_inds) > 0 :
+			ind = self._free_mat_inds.pop(0)
+			self._matrices[ind] = M
+		else:
+			ind = len(self._matrices)
+			self._matrices.append(M)
+		return ind
+	
+	def remove_matrix( self, ind ):
+		self._matrices[ind] = None
+		self._free_mat_inds.append(ind)
+	
 	def insert_dense( self, node ):
 		btype = self.block_type( node )
 		if btype != "Zero" and btype != "Dense" :
@@ -238,34 +258,37 @@ class hMatrix :
 		self._types[ node._node_index ] = "LowRank"
 	
 	def insert_dense( self, node, D ):
-		self.insert_dense( node )
+		if self.block_type( node ) == "LowRank": # for converting low rank to dense
+			self.remove_matrix( self._connectivity[ node._node_index ][0,0] )
+			self.remove_matrix( self._connectivity[ node._node_index ][0,1] )
+			self._connectivity[ node._node_index ] = None
+			self._types[ node._node_index ] = "Zero"
 		
 		if D.shape != self.shape( node ) :
 			raise ValueError(f"Matrix D's shape {D.shape} does not match node shape {self.shape(node)}")
+			
+		self.insert_dense( node )
 		
 		if self._connectivity[ node._node_index ] is None :
-			self._matrices.append( D )
 			self._connectivity[ node._node_index ] = np.array( (1,1), dtype=np.uint64 )
-			self._connectivity[ node._node_index ][0,0] = len(self._matrices)-1
+			self._connectivity[ node._node_index ][0,0] = self.insert_matrix( D )
 		else:
 			mat_ind = self._connectivity[node._node_index][0,0]
 			self._matrices[mat_ind] = D
 	
 	def insert_lowrank( self, node, L, R ):
-		self.insert_lowrank( node )
-		
 		L_shape = L.shape
 		R_shape = R.shape
 		node_shape = self.shape( node )
 		if L_shape[0] != node_shape[0] or R_shape[1] != node_shape[1] or L_shape[1] != R_shape[0]:
 			raise ValueError(f"Matrix product L{L_shape} R{R_shape}, is invalid for node with shape {node_shape}")
 		
+		self.insert_lowrank( node )
+		
 		if self._connectivity[ node._node_index ] is None :
-			self._matrices.append( L )
-			self._matrices.append( R )
 			self._connectivity[ node._node_index ] = np.array( (1,2), dtype=np.uint64 )
-			self._connectivity[ node._node_index ][0,0] = len(self._matrices)-2
-			self._connectivity[ node._node_index ][0,1] = len(self._matrices)-1
+			self._connectivity[ node._node_index ][0,0] = self.insert_matrix( L )
+			self._connectivity[ node._node_index ][0,1] = self.insert_matrix( R )
 		else:
 			L_ind = self._connectivity[node._node_index][0,0]
 			R_ind = self._connectivity[node._node_index][0,1]
