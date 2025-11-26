@@ -32,9 +32,17 @@ def queue_H_GETRF( piv, A ):
 
 def hMatrixGETRF( piv, A ):
 
+	A = A[:,:]
+	
+	N = A.shape[0]
+	if N != A.shape[1] :
+		raise ValueError(f"Cannot factor non-square hMatrix {A.shape}")
+	if len(piv) < N:
+		raise ValueError("piv not long enough {len(piv)}")
+
 	min_block_size = A.min_block_size()
 	
-	job_stack = [ ("GETRF", piv[:], A[:,:]) ]
+	job_stack = [ ( "GETRF", piv[:N], A ) ]
 	while len(job_stack) > 0 :
 		
 		job = job_stack.pop(0)
@@ -52,7 +60,9 @@ def hMatrixGETRF( piv, A ):
 			
 			n = a.shape[0]
 			if n != a.shape[1] :
-				raise ValueError("Non-square block on diagonal")
+				raise AssertionError("Non-square block on diagonal")
+			if n != len(p) :
+				raise AssertionError("pivot array length mismatch")
 			
 			# Base case
 			if type_a == "Dense" :

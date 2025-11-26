@@ -138,6 +138,9 @@ def queue_H_TRSM( side, uplo, piv, A, B ):
 
 
 def hMatrixTRSM( side, uplo, piv, A, B ):
+
+	A = A[:,:]
+	B = B[:,:]
 	
 	if not side in ["L","R"] :
 		raise ValueError("side must be 'L' or 'R', {side} passed in.")
@@ -163,7 +166,7 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 		return
 	
 	
-	job_stack = [ ("TRSM", piv[:], A[:,:], B[:,:]) ]
+	job_stack = [ ( "TRSM", piv[:], A, B ) ]
 	while len(job_stack) > 0 :
 		
 		job = job_stack.pop(0)

@@ -364,20 +364,30 @@ class hMatrix :
 	def get_row_bounds( self, node ):
 		self.validate_iterator( node )
 		
-		nchild = self.children_shape( node )[0]
-		bounds = np.zeros( nchild+1, dtype=np.uint64 )
-		for i in range(nchild):
-			bounds[i+1] = bounds[i] + self.shape( self.get_child( node, i, 0 ) )[0]
-		return bounds
+		if self.block_type( node ) != "H" :
+			n,_ = self.shape( node )
+			return np.array( [ 0, n ], dtype=np.uint64 )
+		
+		else:
+			nchild = self.children_shape( node )[0]
+			bounds = np.zeros( nchild+1, dtype=np.uint64 )
+			for i in range(nchild):
+				bounds[i+1] = bounds[i] + self.shape( self.get_child( node, i, 0 ) )[0]
+			return bounds
 			
 	def get_col_bounds( self, node ):
 		self.validate_iterator( node )
 		
-		nchild = self.children_shape( node )[1]
-		bounds = np.zeros( nchild+1,  dtype=np.uint64 )
-		for i in range(nchild):
-			bounds[i+1] = bounds[i] + self.shape( self.get_child( node, 0, i ) )[1]
-		return bounds
+		if self.block_type( node ) != "H" :
+			_,n = self.shape( node )
+			return np.array( [ 0, n ], dtype=np.uint64 )
+		
+		else:
+			nchild = self.children_shape( node )[1]
+			bounds = np.zeros( nchild+1,  dtype=np.uint64 )
+			for i in range(nchild):
+				bounds[i+1] = bounds[i] + self.shape( self.get_child( node, 0, i ) )[1]
+			return bounds
 
 	def slice( self, node, row_begin, row_end, col_begin, col_end ):
 		# find lowest node in tree which contains the whole slice

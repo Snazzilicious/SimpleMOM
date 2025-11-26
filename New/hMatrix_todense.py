@@ -26,9 +26,12 @@ def queue_H_todense( A, D ):
 
 
 def hMatrix_todense( A ):
-	D = np.zeros( A[:,:].shape, dtype=A.dtype )
 	
-	job_stack = [( A[:,:], D[:,:] )]
+	A = A[:,:]
+	
+	D = np.zeros( A.shape, dtype=A.dtype )
+	
+	job_stack = [( A, D )]
 	while len(job_stack) > 0 :
 
 		a,d = job_stack.pop(0)
@@ -50,3 +53,5 @@ def hMatrix_todense( A ):
 			job_stack[0:0] = queue_H_todense( a, d )
 	
 	return D
+
+

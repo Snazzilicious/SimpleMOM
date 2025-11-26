@@ -1,5 +1,5 @@
 
-def rSVD( L, R, max_rank, tol=1e-5 ):
+def rSVD( L, R, max_rank=None, tol=1e-5 ):
 	
 	QL, RL = np.linalg.qr( L, mode="reduced" )
 	QR, RR = np.linalg.qr( R.T, mode="reduced" )
@@ -17,7 +17,7 @@ def rSVD( L, R, max_rank, tol=1e-5 ):
 	
 	return newL, newR
 
-def dSVD( D, max_rank, tol=1e-5 ):
+def dSVD( D, max_rank=None, tol=1e-5 ):
 	
 	u,s,vh = np.linalg.svd( D )
 	
@@ -32,7 +32,7 @@ def dSVD( D, max_rank, tol=1e-5 ):
 	return newL, newR.copy()
 
 
-def llaxpy( X, Y ): # TODO check for same dataset
+def llaxpy( X, Y, max_rank=None, tol=1e-5 ): # TODO check for same dataset
 	# y <- x + y
 	if X.block_type() == "Zero" :
 		return
@@ -64,7 +64,7 @@ def llaxpy( X, Y ): # TODO check for same dataset
 		y_node.insert_lowrank( newL, newR )
 	
 
-def Leaf_GEMM( alpha, A, B, C ):
+def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 
 	type_a = a.block_type()
 	type_b = b.block_type()
@@ -151,7 +151,7 @@ def Leaf_GEMM( alpha, A, B, C ):
 			
 
 
-def LR_to_LR_GEMM( alpha, A, B, C ):
+def LR_to_LR_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 
 	min_block_size = A.min_block_size()
 
@@ -168,7 +168,7 @@ def LR_to_LR_GEMM( alpha, A, B, C ):
 		new_right = hMatrix( r, n, min_block_size )
 		new_right.insert_dense( new_right.root_node(), np.zeros( (r,n), dtype=C.dtype ) )
 		
-		hMatrixGEMM( alpha, new_a, B, new_right )
+		hMatrixGEMM( alpha, new_a, B, new_right, max_rank, tol )
 		
 		lr_wrapper = hMatrix( m, n, min_block_size )
 		R = new_right.root_node().get_dense_data()
@@ -187,13 +187,13 @@ def LR_to_LR_GEMM( alpha, A, B, C ):
 		new_left = hMatrix( m, r, min_block_size )
 		new_left.insert_dense( new_left.root_node(), np.zeros( (m,r), dtype=C.dtype ) )
 		
-		hMatrixGEMM( alpha, A, new_b, new_left )
+		hMatrixGEMM( alpha, A, new_b, new_left, max_rank, tol )
 		
 		lr_wrapper = hMatrix( m, n, min_block_size )
 		L = new_left.root_node().get_dense_data()
 		lr_wrapper.insert_lowrank( lr_wrapper.root_node(), L, b_right )
 	
-	llaxpy( lr_wrapper[:,:], C )
+	llaxpy( lr_wrapper[:,:], C, max_rank, tol )
 		
 
 def queue_H_GEMM( A, B, C ):
@@ -215,7 +215,11 @@ def queue_H_GEMM( A, B, C ):
 	return jobs
 
 
-def hMatrixGEMM( alpha, A, B, C ):
+def hMatrixGEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
+
+	A = A[:,:]
+	B = B[:,:]
+	C = C[:,:]
 
 	if not A.min_block_size() == B.min_block_size() == C.min_block_size() :
 		raise ValueError("Incompatible min_block_sizes")
@@ -230,7 +234,7 @@ def hMatrixGEMM( alpha, A, B, C ):
 		return
 
 	
-	job_stack = [ (A[:,:],B[:,:],C[:,:]) ]
+	job_stack = [ ( A, B, C ) ]
 	while len(job_stack) > 0 :
 
 		a,b,c = job_stack.pop(0)
