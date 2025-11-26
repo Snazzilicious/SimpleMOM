@@ -154,9 +154,9 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 	
 	if A.shape[0] != A.shape[1] :
 		raise ValueError(f"Non-square matrix passed to TRSM {A.shape}")
-	if side == "L" and A.shape[1] != B.shape[0] : # TODO depends on solve side !!!
+	if side == "L" and A.shape[1] != B.shape[0] :
 		raise ValueError(f"Incompatible matrix dimensions {A.shape} {B.shape}")
-	elif side == "R" and A.shape[0] != B.shape[1]
+	elif side == "R" and A.shape[0] != B.shape[1] :
 		raise ValueError(f"Incompatible matrix dimensions {B.shape} {A.shape}")
 	
 	if not A.dtype == B.dtype :

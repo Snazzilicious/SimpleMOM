@@ -21,7 +21,6 @@
 import numpy as np
 
 
-
 '''Block boundary routines
 '''
 def num_blocks( min_block_size, length ):
@@ -251,15 +250,8 @@ class hMatrix :
 		if not all([ on_block_boundary( block_size, ncols, v ) for v in col_parts ]) :
 			raise ValueError("Col partition point not on boundary")
 		
-		
-		if 0 not in row_parts :
-			row_parts.insert( 0, 0 )
-		if nrows not in row_parts :
-			row_parts.append( nrows )
-		if 0 not in col_parts :
-			col_parts.insert( 0, 0 )
-		if ncols not in col_parts :
-			col_parts.append( ncols )
+		row_parts = [0]+[i for i in row_parts if 0 < i < nrows]+[nrows]
+		col_parts = [0]+[i for i in col_parts if 0 < i < ncols]+[ncols]
 	
 		self._connectivity[ node._node_index ] = np.zeros( ( len(row_parts)-1, len(col_parts)-1 ), dtype=np.uint64 )
 		self._types[ node._node_index ] = "H"
@@ -308,7 +300,7 @@ class hMatrix :
 		elif btype != "Zero" and btype != "Dense" :
 			raise ValueError(f"Cannot insert Dense into {btype}")
 		
-		if D is not None and D.shape != self.shape( node ) :
+		if (D is not None) and (D.shape != self.shape( node )) :
 			raise ValueError(f"Matrix D's shape {D.shape} does not match node shape {self.shape(node)}")
 		
 		if D is not None :
@@ -329,7 +321,7 @@ class hMatrix :
 		if btype != "Zero" and btype != "LowRank" :
 			raise ValueError(f"Cannot insert LowRank into {btype}")
 		
-		if L is None ^ R is None :
+		if (L is None) ^ (R is None) :
 			raise ValueError("Must insert both low rank factors")
 		
 		if L is not None :

@@ -1,5 +1,14 @@
 
+
+import numpy as np
+
+from hMatrix import hMatrix
+
+
 def rSVD( L, R, max_rank=None, tol=1e-5 ):
+
+	if max_rank is None:
+		max_rank = L.shape[1]
 	
 	QL, RL = np.linalg.qr( L, mode="reduced" )
 	QR, RR = np.linalg.qr( R.T, mode="reduced" )
@@ -13,11 +22,14 @@ def rSVD( L, R, max_rank=None, tol=1e-5 ):
 	new_rank = min( new_rank, max_rank )
 	
 	newL = QL @ ( u[:,:new_rank] * s[:new_rank] )
-	newR = vh[:new_rank,:] @ QR
+	newR = vh[:new_rank,:] @ QR.T
 	
 	return newL, newR
 
 def dSVD( D, max_rank=None, tol=1e-5 ):
+
+	if max_rank is None:
+		max_rank = min(D.shape)
 	
 	u,s,vh = np.linalg.svd( D )
 	
@@ -51,8 +63,8 @@ def llaxpy( X, Y, max_rank=None, tol=1e-5 ): # TODO check for same dataset
 		newR[:y_rank,:] = yR[:,:]
 	
 	xL, xR = X.get_lowrank_data()
-	newL[ Y.row_begin:Y.row_end, y_rank: ] = xL[:,:]
-	newR[ y_rank:, Y.col_begin:Y.col_end ] = xR[:,:]
+	newL[ Y._row_begin:Y._row_end, y_rank: ] = xL[:,:]
+	newR[ y_rank:, Y._col_begin:Y._col_end ] = xR[:,:]
 	
 	newL, newR = rSVD( newL, newR, max_rank, tol )
 	
@@ -66,12 +78,12 @@ def llaxpy( X, Y, max_rank=None, tol=1e-5 ): # TODO check for same dataset
 
 def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 
-	type_a = a.block_type()
-	type_b = b.block_type()
-	type_c = c.block_type()
+	type_a = A.block_type()
+	type_b = B.block_type()
+	type_c = C.block_type()
 	
-	if type_c == "Zero" or type_c == "LowRank" :
-		if type_a == "Dense" and type_b == "Dense" :
+	if (type_c == "Zero") or (type_c == "LowRank") :
+		if (type_a == "Dense") and (type_b == "Dense") :
 			D_a = A.get_dense_data()
 			D_b = B.get_dense_data()
 			
@@ -79,7 +91,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			
 			L,R = dSVD( tmp, max_rank, tol )
 		
-		elif type_a == "LowRank" and type_b == "LowRank" :
+		elif (type_a == "LowRank") and (type_b == "LowRank") :
 			L_a, R_a = A.get_lowrank_data()
 			L_b, R_b = B.get_lowrank_data()
 			
@@ -100,18 +112,18 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 		
 		wrapper = hMatrix( *(C.shape), C.min_block_size(), C.dtype )
 		wrapper.insert_lowrank( wrapper.root_node(), L, R )
-		llaxpy( wrapper[:,:], C )
+		llaxpy( wrapper[:,:], C, max_rank, tol )
 			
 	
 	elif type_c == "Dense" :
-		if type_a == "Dense" and type_b == "Dense" :
+		if (type_a == "Dense") and (type_b == "Dense") :
 			D_a = A.get_dense_data()
 			D_b = B.get_dense_data()
 			D_c = C.get_dense_data()
 			
 			D_c += alpha * D_a @ D_b
 		
-		elif type_a == "Dense" and type_b == "LowRank" :
+		elif (type_a == "Dense") and (type_b == "LowRank") :
 			D_a = A.get_dense_data()
 			L_b, R_b = B.get_lowrank_data()
 			D_c = C.get_dense_data()
@@ -119,7 +131,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			tmp = alpha * D_a @ L_b
 			D_c += tmp @ R_b
 		
-		elif type_a == "LowRank" and type_b == "Dense" :
+		elif (type_a == "LowRank") and (type_b == "Dense") :
 			L_a, R_a = A.get_lowrank_data()
 			D_b = B.get_dense_data()
 			D_c = C.get_dense_data()
@@ -127,7 +139,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			tmp = alpha * R_a @ D_b
 			D_c += L_b @ tmp
 		
-		elif type_a == "LowRank" and type_b == "LowRank" :
+		elif (type_a == "LowRank") and (type_b == "LowRank") :
 			L_a, R_a = A.get_lowrank_data()
 			L_b, R_b = B.get_lowrank_data()
 			D_c = C.get_dense_data()
@@ -221,16 +233,16 @@ def hMatrixGEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 	B = B[:,:]
 	C = C[:,:]
 
-	if not A.min_block_size() == B.min_block_size() == C.min_block_size() :
+	if not (A.min_block_size() == B.min_block_size() == C.min_block_size()) :
 		raise ValueError("Incompatible min_block_sizes")
 
-	if A.shape[0] != C.shape[0] or B.shape[1] != C.shape[1] or A.shape[1] != B.shape[0]:
+	if (A.shape[0] != C.shape[0]) or (B.shape[1] != C.shape[1]) or (A.shape[1] != B.shape[0]):
 		raise ValueError(f"Incompatible matrix dimensions: {A.shape}, {B.shape}, {C.shape}")
 	
-	if not A.dtype == B.dtype == C.dtype :
+	if not (A.dtype == B.dtype == C.dtype) :
 		raise ValueError(f"Mismatch of dtypes {A.dtype} {B.dtype} {C.dtype}")
 	
-	if C.shape[0] == 0 or C.shape[1] == 0 :
+	if (C.shape[0] == 0) or (C.shape[1] == 0) :
 		return
 
 	
@@ -238,7 +250,7 @@ def hMatrixGEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 	while len(job_stack) > 0 :
 
 		a,b,c = job_stack.pop(0)
-		if a.shape[0] != c.shape[0] or b.shape[1] != c.shape[1] or a.shape[1] != b.shape[0]:
+		if (a.shape[0] != c.shape[0]) or (b.shape[1] != c.shape[1]) or (a.shape[1] != b.shape[0]):
 			raise AssertionError(f"Incompatible matrix dimensions: {a.shape}, {b.shape}, {c.shape}")
 		
 		type_a = a.block_type()
@@ -246,15 +258,15 @@ def hMatrixGEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 		type_c = c.block_type()
 		
 		# Trivial case
-		if type_a == "Zero" or type_b == "Zero" :
+		if (type_a == "Zero") or (type_b == "Zero") :
 			continue
 		
 		# Special case of LowRank times non-LowRank assigned to LowRank
-		elif (type_c == "Zero" or type_c == "LowRank") and (type_a == "LowRank" ^ type_b == "LowRank") :
+		elif (type_c == "Zero" or type_c == "LowRank") and ((type_a == "LowRank") ^ (type_b == "LowRank")) :
 			LR_to_LR_GEMM( alpha, a, b, c )
 		
 		# Base case
-		elif type_a != "H" and type_b != "H" and type_c != "H":
+		elif (type_a != "H") and (type_b != "H") and (type_c != "H"):
 			Leaf_GEMM( alpha, a, b, c )
 
 		# General case
