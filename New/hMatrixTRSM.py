@@ -29,10 +29,10 @@ def Leaf_TRSM( side, uplo, piv, A, B ):
 		x = x[ipiv]
 		x = x.T
 	
-	elif side == "L" and uplo == "R" :
+	elif side == "L" and uplo == "U" :
 		x = solve_triangular( lu, b, trans=0, lower=False, unit_diagonal=False, overwrite_b=True, check_finite=False)
 	
-	elif side == "R" and uplo == "R" :
+	elif side == "R" and uplo == "U" :
 		x = solve_triangular( lu, b, trans=1, lower=False, unit_diagonal=False, overwrite_b=True, check_finite=False)
 	
 	else:

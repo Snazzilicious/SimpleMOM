@@ -1,19 +1,6 @@
 
 
 # TODO
-# check node types and dimensions and bounds
-# try getting matrices
-# compare to todense
-# check slice types and dimensions and bounds
-# try getting matrices
-# compare to todense
-
-# GEMM
-	# rSVD x2
-	# llaxpy
-	# leaf gemm
-	# GEMM - compare todense multiplies
-
 # TRSM
 	# compare to todense tri solve
 
@@ -26,6 +13,9 @@ import numpy as np
 
 import hMatrix
 import hMatrix_todense
+import hMatrixGEMM
+import hMatrixTRSM
+import hMatrixGETRF
 
 
 def rand_complex( shp ):
@@ -187,9 +177,6 @@ def test_construction():
 
 
 
-import hMatrix
-import hMatrix_todense
-import hMatrixGEMM
 
 def test_hMatrixGEMM_1():
 
@@ -219,6 +206,68 @@ def test_hMatrixGEMM_1():
 	c = hMatrix_todense.hMatrix_todense( C )
 
 	assert np.linalg.norm((a@b)-c) < 1e-9
+
+
+def test_hMatrixGEMM_2():
+	
+	A = hMatrix.hMatrix( 10,10,10 )
+	A.insert_dense( A.root_node(), np.eye( 10 , dtype=A.dtype ) )
+	B = hMatrix.hMatrix( 0,1,10 )
+	C = hMatrix.hMatrix( 0,1,10 )
+	
+	hMatrixGEMM.hMatrixGEMM( 1.0, A[1:1,1:1], B, C )
+	
+
+def test_hMatrixGEMM_3():
+
+	seed = np.random.randint(0,10000)
+	print(f"Random seed is {seed}")
+	np.random.seed(seed)
+
+	A, tru_dense_A = make_random_hMatrix( 43,63, 5 )
+	B, tru_dense_B = make_random_hMatrix( 63,43, 5 )
+	C, tru_dense_C = make_random_hMatrix( 43,43, 5 )
+	
+	hMatrixGEMM.hMatrixGEMM( -1.0, A, B, C )
+	
+	dense_C = hMatrix_todense.hMatrix_todense( C )
+	
+	tru_dense_C -= tru_dense_A @ tru_dense_B
+	
+	assert np.max( np.abs( tru_dense_C - dense_C ) ) < 1e-9
+
+
+
+def test_hMatrixTRSM_1():
+
+	seed = np.random.randint(0,10000)
+	print(f"Random seed is {seed}")
+	np.random.seed(seed)
+	
+	M = 43
+	block_size = 5
+
+	A, tru_dense_A = make_random_hMatrix( M, M, block_size )
+	
+	p = zeros( M, dtype=np.uint64 )
+	n_blocks = hMatrix.num_blocks( block_size, M )
+	for i in range(n_blocks):
+		begin = hMatrix.block_begin( block_size, M, i )
+		end = hMatrix.block_begin( block_size, M, i+1 )
+		p[begin:end] = np.arange(end-begin)
+	
+	B, tru_dense_B = make_random_hMatrix( M, 10, block_size )
+	
+	hMatrixTRSM.hMatrixTRSM( ... )
+		
+
+
+
+
+
+
+
+
 
 
 

@@ -12,8 +12,6 @@
 # use correct type of exceptions
 # Error checking
 # Testing
-	# construction
-	# to dense
 	# rSVD x 2
 	# Leaf GEMM
 	# GEMM
@@ -63,7 +61,7 @@ def get_limits( s, n ):
 	
 	if stride != 1 :
 		raise ValueError("hMatrices do not support strided slices")
-	if begin >= end :
+	if begin > end :
 		raise ValueError(f"Slice limits out of order {begin}:{end}")
 	
 	return begin,end

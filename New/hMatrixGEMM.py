@@ -49,14 +49,14 @@ def llaxpy( X, Y, max_rank=None, tol=1e-5 ): # TODO check for same dataset
 	if X.block_type() == "Zero" :
 		return
 	
-	m,n = Y.shape
+	y_node = Y.get_parent()
+	m,n = y_node.shape
 	y_rank = Y.rank()
 	x_rank = X.rank()
 	
 	newL = np.zeros(( m, y_rank+x_rank ), dtype=Y.dtype )
 	newR = np.zeros(( y_rank+x_rank, n ), dtype=Y.dtype )
 	
-	y_node = Y.get_parent()
 	if Y.block_type() == "LowRank" :
 		yL, yR = y_node.get_lowrank_data()
 		newL[:,:y_rank] = yL[:,:]
@@ -137,7 +137,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			D_c = C.get_dense_data()
 			
 			tmp = alpha * R_a @ D_b
-			D_c += L_b @ tmp
+			D_c += L_a @ tmp
 		
 		elif (type_a == "LowRank") and (type_b == "LowRank") :
 			L_a, R_a = A.get_lowrank_data()
