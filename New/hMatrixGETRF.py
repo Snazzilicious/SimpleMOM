@@ -20,12 +20,16 @@ def queue_H_GETRF( piv, A ):
 		
 		p = piv[ diag_begin:diag_end ]
 		a = A[ diag_begin:diag_end, diag_begin:diag_end ]
-		b = A[ diag_begin:diag_end, diag_end: ]
-		c = A[ diag_end:, diag_begin:diag_end ]
-		d = A[ diag_end:, diag_end: ]
 		
 		jobs.append(( "GETRF", p, a ))
-		jobs.append(( "TRSM_GEMM", p, a, b, c, d ))
+		
+		
+		if diag_end != diag_bounds[-1] :
+			b = A[ diag_begin:diag_end, diag_end: ]
+			c = A[ diag_end:, diag_begin:diag_end ]
+			d = A[ diag_end:, diag_end: ]
+			
+			jobs.append(( "TRSM_GEMM", p, a, b, c, d ))
 		
 	return jobs
 

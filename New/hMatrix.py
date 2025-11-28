@@ -1,20 +1,17 @@
 
 # TODO
 # Constructing hMatrices
-#    Test construction
 #    Error checking
 #    reblockify
-# Support size zero slices
+#    deep copy
+#    support size 0
 # GEMM
 #    check for same basis
 #    revise order of low rank products
-# semi-colons
 # use correct type of exceptions
 # Error checking
 # Testing
-	# rSVD x 2
-	# Leaf GEMM
-	# GEMM
+	# TRSM Uppers are not as accurate
 
 import numpy as np
 
@@ -61,7 +58,7 @@ def get_limits( s, n ):
 	
 	if stride != 1 :
 		raise ValueError("hMatrices do not support strided slices")
-	if begin > end :
+	if begin >= end :
 		raise ValueError(f"Slice limits out of order {begin}:{end}")
 	
 	return begin,end

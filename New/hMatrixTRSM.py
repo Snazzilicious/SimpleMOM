@@ -1,4 +1,10 @@
 
+import numpy as np
+from scipy.linalg import solve_triangular
+
+from hMatrix import hMatrix, num_blocks, block_begin
+from hMatrixGEMM import hMatrixGEMM
+
 
 def Leaf_TRSM( side, uplo, piv, A, B ):
 	
@@ -33,7 +39,9 @@ def Leaf_TRSM( side, uplo, piv, A, B ):
 		x = solve_triangular( lu, b, trans=0, lower=False, unit_diagonal=False, overwrite_b=True, check_finite=False)
 	
 	elif side == "R" and uplo == "U" :
-		x = solve_triangular( lu, b, trans=1, lower=False, unit_diagonal=False, overwrite_b=True, check_finite=False)
+		x = b.T
+		x = solve_triangular( lu, x, trans=1, lower=False, unit_diagonal=False, overwrite_b=True, check_finite=False)
+		x = x.T
 	
 	else:
 		raise ValueError(f"Invalid side ({side}) or uplo ({uplo})")
@@ -66,74 +74,86 @@ def wrap_partition_dense( n, min_block_size, D ):
 def queue_H_TRSM( side, uplo, piv, A, B ):
 	
 	jobs=[]
-	if ( side == "L" and uplo == "L" ) or ( side == "R" and uplo == "U" ) :
+	if side == "L" and uplo == "L" :
 		diag_bounds = np.union1d( A.get_col_bounds(), B.get_row_bounds() )
 		for diag_begin,diag_end in zip(diag_bounds[:-1],diag_bounds[1:]):
 			
 			lu = A[diag_begin:diag_end,diag_begin:diag_end]
 			p = piv[diag_begin:diag_end]
 			
-			if side == "L" and uplo == "L" :
+			col_bounds = B.get_col_bounds()
+			for col_begin,col_end in zip(col_bounds[:-1],col_bounds[1:]):
 				
-				col_bounds = B.get_col_bounds()
-				for col_begin,col_end in zip(col_bounds[:-1],col_bounds[1:]):
-					
-					b = B[diag_begin:diag_end,col_begin:col_end]
-					jobs.append(( "TRSM", p, lu, b ))
-				
+				b = B[diag_begin:diag_end,col_begin:col_end]
+				jobs.append(( "TRSM", p, lu, b ))
+			
+			if diag_end != diag_bounds[-1] :
 				a = A[diag_end:,diag_begin:diag_end]
 				b = B[diag_begin:diag_end,:]
 				c = B[diag_end:,:]
 				jobs.append(( "GEMM", a, b, c ))
+	
+	elif side == "R" and uplo == "U" :
+		diag_bounds = np.union1d( A.get_row_bounds(), B.get_col_bounds() )
+		for diag_begin,diag_end in zip(diag_bounds[:-1],diag_bounds[1:]):
 			
-			else:
+			lu = A[diag_begin:diag_end,diag_begin:diag_end]
+			p = piv[diag_begin:diag_end]
+		
+			row_bounds = B.get_row_bounds()
+			for row_begin,row_end in zip(row_bounds[:-1],row_bounds[1:]):
 				
-				row_bounds = B.get_row_bounds()
-				for row_begin,row_end in zip(row_bounds[:-1],row_bounds[1:]):
-					
-					b = B[row_begin:row_end,diag_begin:diag_end]
-					jobs.append(( "TRSM", p, lu, b ))
-				
+				b = B[row_begin:row_end,diag_begin:diag_end]
+				jobs.append(( "TRSM", p, lu, b ))
+			
+			if diag_end != diag_bounds[-1] :
 				a = B[:,diag_begin:diag_end]
 				b = A[diag_begin:diag_end,diag_end:]
 				c = B[:,diag_end:]
 				jobs.append(( "GEMM", a, b, c ))
 	
-	elif ( side == "L" and uplo == "U" ) or ( side == "R" and uplo == "L" ) :
+	elif side == "L" and uplo == "U" :
 		diag_bounds = np.union1d( A.get_col_bounds(), B.get_row_bounds() )[::-1] # iterate in reverse order
 		for diag_end,diag_begin in zip(diag_bounds[:-1],diag_bounds[1:]):
 			
 			lu = A[diag_begin:diag_end,diag_begin:diag_end]
 			p = piv[diag_begin:diag_end]
 			
-			if side == "L" and uplo == "U" :
-				
+			if diag_end != diag_bounds[0] :
 				a = A[ diag_begin:diag_end, diag_end: ]
 				b = B[ diag_end:, : ]
 				c = B[ diag_begin:diag_end, : ]
 				jobs.append(( "GEMM", a, b, c ))
-				
-				col_bounds = B.get_col_bounds()
-				for col_begin,col_end in zip(col_bounds[:-1],col_bounds[1:]):
-				
-					b = B[ diag_begin:diag_end, col_begin:col_end ]
-					jobs.append(( "TRSM", p, lu, b ))
 			
-			else:
-				
+			col_bounds = B.get_col_bounds()
+			for col_begin,col_end in zip(col_bounds[:-1],col_bounds[1:]):
+			
+				b = B[ diag_begin:diag_end, col_begin:col_end ]
+				jobs.append(( "TRSM", p, lu, b ))
+	
+	elif side == "R" and uplo == "L" :
+		diag_bounds = np.union1d( A.get_row_bounds(), B.get_col_bounds() )[::-1] # iterate in reverse order
+		for diag_end,diag_begin in zip(diag_bounds[:-1],diag_bounds[1:]):
+			
+			lu = A[diag_begin:diag_end,diag_begin:diag_end]
+			p = piv[diag_begin:diag_end]
+			
+			if diag_end != diag_bounds[0] :
 				a = B[ :, diag_end: ]
 				b = A[ diag_end:, diag_begin:diag_end ]
 				c = B[ :, diag_begin:diag_end ]
 				jobs.append(( "GEMM", a, b, c ))
+			
+			row_bounds = B.get_row_bounds()
+			for row_begin,row_end in zip(row_bounds[:-1],row_bounds[1:]):
 				
-				row_bounds = B.get_row_bounds()
-				for row_begin,row_end in zip(row_bounds[:-1],row_bounds[1:]):
-					
-					b = B[row_begin:row_end,diag_begin:diag_end]
-					jobs.append(( "TRSM", p, lu, b ))
+				b = B[row_begin:row_end,diag_begin:diag_end]
+				jobs.append(( "TRSM", p, lu, b ))
 	
 	else:
 		raise ValueError(f"Invalid side ({side}) or uplo ({uplo})")
+	
+	return jobs
 		
 
 
@@ -173,7 +193,7 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 		
 		if job[0] == "GEMM" :
 			a,b,c = job[1:]
-			hMatrixGEMM( -1, a, b, c )
+			hMatrixGEMM( -1.0, a, b, c )
 		
 		else:
 			p,a,b = job[1:]
@@ -182,9 +202,11 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 			
 			n = a.shape[0]
 			if n != a.shape[1] :
-				raise ValueError("Non-square block on diagonal")
-			if n != b.shape[0] :
-				raise ValueError(f"Incompatible matrix dimensions {a.shape} {b.shape}")
+				raise AssertionError("Non-square block on diagonal")
+			if side == "L" and n != b.shape[0] :
+				raise AssertionError(f"Incompatible matrix dimensions {a.shape} {b.shape}")
+			if side == "R" and n != b.shape[1] :
+				raise AssertionError(f"Incompatible matrix dimensions {a.shape} {b.shape}")
 			
 			# Trivial case
 			if type_b == "Zero" :
@@ -192,7 +214,7 @@ def hMatrixTRSM( side, uplo, piv, A, B ):
 			
 			# Base case
 			if type_a == "Dense" and type_b != "H":
-				if n == min_block_size :
+				if num_blocks( min_block_size, n ) == 1 :
 					Leaf_TRSM( side, uplo, p, a, b )
 				
 				else : # Block is bigger than min_block_size and must be subdivided

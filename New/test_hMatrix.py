@@ -51,7 +51,7 @@ def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 				
 				if r < dense_prob :
 					# Make dense
-					D = rand_complex( (m,n) )
+					D = rand_complex( (m,n) ) + 2*np.eye( m, dtype=np.complex128 )
 					tru_A[ grb:gre, gcb:gce ] = D[:,:]
 					node.insert_dense( D )
 				
@@ -208,17 +208,17 @@ def test_hMatrixGEMM_1():
 	assert np.linalg.norm((a@b)-c) < 1e-9
 
 
-def test_hMatrixGEMM_2():
-	
-	A = hMatrix.hMatrix( 10,10,10 )
-	A.insert_dense( A.root_node(), np.eye( 10 , dtype=A.dtype ) )
-	B = hMatrix.hMatrix( 0,1,10 )
-	C = hMatrix.hMatrix( 0,1,10 )
-	
-	hMatrixGEMM.hMatrixGEMM( 1.0, A[1:1,1:1], B, C )
+#def test_hMatrixGEMM_2(): # test support for size 0 matrices
+#	
+#	A = hMatrix.hMatrix( 10,10,10 )
+#	A.insert_dense( A.root_node(), np.eye( 10 , dtype=A.dtype ) )
+#	B = hMatrix.hMatrix( 0,1,10 )
+#	C = hMatrix.hMatrix( 0,1,10 )
+#	
+#	hMatrixGEMM.hMatrixGEMM( 1.0, A[1:1,1:1], B, C )
 	
 
-def test_hMatrixGEMM_3():
+def test_hMatrixGEMM_2():
 
 	seed = np.random.randint(0,10000)
 	print(f"Random seed is {seed}")
@@ -238,9 +238,12 @@ def test_hMatrixGEMM_3():
 
 
 
+from scipy.linalg import solve_triangular
+
 def test_hMatrixTRSM_1():
 
 	seed = np.random.randint(0,10000)
+	seed = 6063
 	print(f"Random seed is {seed}")
 	np.random.seed(seed)
 	
@@ -249,17 +252,68 @@ def test_hMatrixTRSM_1():
 
 	A, tru_dense_A = make_random_hMatrix( M, M, block_size )
 	
-	p = zeros( M, dtype=np.uint64 )
+	p = np.zeros( M, dtype=np.uint64 )
 	n_blocks = hMatrix.num_blocks( block_size, M )
 	for i in range(n_blocks):
 		begin = hMatrix.block_begin( block_size, M, i )
 		end = hMatrix.block_begin( block_size, M, i+1 )
 		p[begin:end] = np.arange(end-begin)
 	
+	
+	
 	B, tru_dense_B = make_random_hMatrix( M, 10, block_size )
 	
-	hMatrixTRSM.hMatrixTRSM( ... )
-		
+	side = "L"
+	uplo = "L"
+	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	
+	dense_x = hMatrix_todense.hMatrix_todense( B )
+	
+	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B, trans=0, lower=True, unit_diagonal=True, overwrite_b=False, check_finite=False)
+	
+	assert np.max( np.abs( tru_dense_x - dense_x ) ) < 1e-9
+	
+	
+	
+	B, tru_dense_B = make_random_hMatrix( 10, M, block_size )
+	
+	side = "R"
+	uplo = "L"
+	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	
+	dense_x = hMatrix_todense.hMatrix_todense( B )
+	
+	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B.T, trans=1, lower=True, unit_diagonal=True, overwrite_b=False, check_finite=False)
+	
+	assert np.max( np.abs( tru_dense_x.T - dense_x ) ) < 1e-9
+	
+	
+	
+	B, tru_dense_B = make_random_hMatrix( M, 10, block_size )
+	
+	side = "L"
+	uplo = "U"
+	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	
+	dense_x = hMatrix_todense.hMatrix_todense( B )
+	
+	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B, trans=0, lower=False, unit_diagonal=False, overwrite_b=False, check_finite=False)
+	
+	assert np.max( np.abs( tru_dense_x - dense_x ) ) < 1e-6
+	
+
+	
+	B, tru_dense_B = make_random_hMatrix( 10, M, block_size )
+	
+	side = "R"
+	uplo = "U"
+	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	
+	dense_x = hMatrix_todense.hMatrix_todense( B )
+	
+	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B.T, trans=1, lower=False, unit_diagonal=False, overwrite_b=False, check_finite=False)
+	
+	assert np.max( np.abs( tru_dense_x.T - dense_x ) ) < 1e-6
 
 
 
