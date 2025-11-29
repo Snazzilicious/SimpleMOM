@@ -243,7 +243,6 @@ from scipy.linalg import solve_triangular
 def test_hMatrixTRSM_1():
 
 	seed = np.random.randint(0,10000)
-	seed = 6063
 	print(f"Random seed is {seed}")
 	np.random.seed(seed)
 	
@@ -318,7 +317,31 @@ def test_hMatrixTRSM_1():
 
 
 
+def test_hMatrixGETRF_1():
+	seed = np.random.randint(0,10000)
+	print(f"Random seed is {seed}")
+	np.random.seed(seed)
+	
+	M = 43
+	block_size = 5
 
+	A, tru_dense_A = make_random_hMatrix( M, M, block_size )
+	p = np.zeros( M, dtype = np.uint64 )
+	
+	hMatrixGETRF.hMatrixGETRF( p, A )
+	
+	B = hMatrix.hMatrix( M, 2, block_size )
+	tru_dense_B = rand_complex( (M,2) )
+	B.root_node().insert_dense( tru_dense_B )
+	
+	tru_dense_x = np.linalg.solve( tru_dense_A, tru_dense_B )
+	
+	hMatrixTRSM.hMatrixTRSM( "L", "L", p, A, B )
+	hMatrixTRSM.hMatrixTRSM( "L", "U", p, A, B )
+	
+	dense_x = hMatrix_todense.hMatrix_todense( B )
+	
+	assert np.max( np.abs( tru_dense_x - dense_x ) ) < 1e-9
 
 
 

@@ -1,9 +1,14 @@
 
+import numpy as np
+from scipy.linalg import lu_factor
 
+from hMatrix import num_blocks
+from hMatrixGEMM import hMatrixGEMM
+from hMatrixTRSM import hMatrixTRSM, wrap_partition_dense
 
 def Leaf_GETRF( piv, A ):
 	a = A.get_dense_data()
-	lu, swaps = scipy.linalg.lu_factor( a, overwrite_a=True, check_finite=False )
+	lu, swaps = lu_factor( a, overwrite_a=True, check_finite=False )
 	
 	a[:,:] = lu[:,:]
 	
@@ -13,7 +18,7 @@ def Leaf_GETRF( piv, A ):
 
 
 def queue_H_GETRF( piv, A ):
-	diag_bounds = a.get_row_bounds()
+	diag_bounds = A.get_row_bounds()
 	
 	jobs=[]
 	for diag_begin,diag_end in zip(diag_bounds[:-1],diag_bounds[1:]):
@@ -22,7 +27,6 @@ def queue_H_GETRF( piv, A ):
 		a = A[ diag_begin:diag_end, diag_begin:diag_end ]
 		
 		jobs.append(( "GETRF", p, a ))
-		
 		
 		if diag_end != diag_bounds[-1] :
 			b = A[ diag_begin:diag_end, diag_end: ]
@@ -70,12 +74,12 @@ def hMatrixGETRF( piv, A ):
 			
 			# Base case
 			if type_a == "Dense" :
-				if n == min_block_size :
+				if num_blocks( min_block_size, n ) == 1 :
 					Leaf_GETRF( p, a )
 				
 				else : # Block is bigger than min_block_size and must be subdivided
 					wrapper = wrap_partition_dense( n, min_block_size, a )
-					hMatrixGETRF( p, a )
+					hMatrixGETRF( p, wrapper )
 						
 			# Invalid case
 			elif type_a == "Zero" or type_a == "LowRank" :
