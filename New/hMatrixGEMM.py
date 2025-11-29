@@ -97,7 +97,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			
 			tmp1 = alpha * R_a @ L_b
 			
-			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO
+			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO revisit this logic
 				tmp2 = L_a @ tmp1
 				L = tmp2
 				R = R_b
@@ -146,7 +146,7 @@ def Leaf_GEMM( alpha, A, B, C, max_rank=None, tol=1e-5 ):
 			
 			tmp1 = alpha * R_a @ L_b
 			
-			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO
+			if np.prod(L_a.shape) < np.prod(R_b.shape) : # TODO revisit this logic
 				tmp2 = L_a @ tmp1
 				D_c += tmp2 @ R_b
 			else:

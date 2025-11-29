@@ -1,12 +1,5 @@
 
 
-# TODO
-# TRSM
-	# compare to todense tri solve
-
-# GETRF
-	# compare to dense solve
-
 	
 
 import numpy as np

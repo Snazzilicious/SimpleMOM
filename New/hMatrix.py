@@ -1,17 +1,21 @@
 
 # TODO
 # Constructing hMatrices
-#    Error checking
 #    reblockify
 #    deep copy
 #    support size 0
 # GEMM
 #    check for same basis
 #    revise order of low rank products
-# use correct type of exceptions
-# Error checking
+# Cluster
+# Fill
+	# ACA
+# Distributed and OOC
+# More Error checking & catching
+	# use correct type of exceptions
 # Testing
 	# TRSM Uppers are not as accurate
+	# Go bigger
 
 import numpy as np
 
