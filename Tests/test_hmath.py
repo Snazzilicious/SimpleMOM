@@ -1,14 +1,20 @@
 
 
-	
+import os
+import sys
+
+parent_dir = os.path.sep.join( os.path.abspath(__file__).split(os.path.sep)[:-2] )
+sys.path.insert( 0, parent_dir )
 
 import numpy as np
 
-import hMatrix
-import hMatrix_todense
-import hMatrixGEMM
-import hMatrixTRSM
-import hMatrixGETRF
+#import hMatrix
+#import hMatrix_todense
+#import hMatrixGEMM
+#import hMatrixTRSM
+#import hMatrixGETRF
+
+import hmath
 
 
 """Tests of block boundary functions
@@ -16,24 +22,24 @@ import hMatrixGETRF
 
 def test_num_blocks():
 	
-	assert hMatrix.num_blocks( 10, 23 ) == 2
+	assert hmath.num_blocks( 10, 23 ) == 2
 	
-	assert hMatrix.num_blocks( 10, 5 ) == 1
+	assert hmath.num_blocks( 10, 5 ) == 1
 	
-	assert hMatrix.num_blocks( 256, 2e6 ) == 7812
+	assert hmath.num_blocks( 256, 2e6 ) == 7812
 
 
 def test_block_size():
 	
 	min_block_size = 200
 	length = 34567
-	all_sizes = [hMatrix.block_size( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length ))]
+	all_sizes = [hmath.block_size( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length ))]
 	
 	assert length == sum(all_sizes)
 	
 	min_block_size = 200
 	length = 100
-	all_sizes = [hMatrix.block_size( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length ))]
+	all_sizes = [hmath.block_size( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length ))]
 	
 	assert length == sum(all_sizes)
 
@@ -42,9 +48,9 @@ def test_block_begins():
 	
 	min_block_size = 200
 	length = 368897
-	all_sizes = np.array([hMatrix.block_size( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length ))])
+	all_sizes = np.array([hmath.block_size( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length ))])
 	
-	bounds = [ hMatrix.block_begin( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length )+1) ]
+	bounds = [ hmath.block_begin( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length )+1) ]
 	
 	assert bounds[0] == 0
 	assert bounds[-1] == length
@@ -55,13 +61,13 @@ def test_block_index():
 	
 	min_block_size = 20
 	length = 369
-	bounds = [ hMatrix.block_begin( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length )+1) ]
+	bounds = [ hmath.block_begin( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length )+1) ]
 	
 	for i in range(len(bounds)-1):
 		begin = bounds[i]
 		end = bounds[i+1]
 		
-		inds = np.array([ hMatrix.block_index( min_block_size, length, i ) for i in range(begin,end,1) ])
+		inds = np.array([ hmath.block_index( min_block_size, length, i ) for i in range(begin,end,1) ])
 		
 		assert np.all( inds == i )
 		
@@ -70,10 +76,10 @@ def test_on_block_boundary():
 	
 	min_block_size = 20
 	length = 369
-	bounds = [ hMatrix.block_begin( min_block_size, length, i ) for i in range(hMatrix.num_blocks( min_block_size, length )+1) ]
+	bounds = [ hmath.block_begin( min_block_size, length, i ) for i in range(hmath.num_blocks( min_block_size, length )+1) ]
 	
 	for i in range(length+1):
-		assert hMatrix.on_block_boundary( min_block_size, length, i ) == (i in bounds)
+		assert hmath.on_block_boundary( min_block_size, length, i ) == (i in bounds)
 	
 
 
@@ -88,7 +94,7 @@ def rand_complex( shp ):
 def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 	
 	tru_A = np.zeros( (M,N), dtype=np.complex128 )
-	A = hMatrix.hMatrix( M, N, block_size )
+	A = hmath.hMatrix( M, N, block_size )
 	
 	job_stack = [( A.root_node(), 0,M, 0,N )]
 	while len(job_stack) > 0 :
@@ -96,8 +102,8 @@ def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 		node, grb,gre, gcb,gce = job_stack.pop(0)
 		m,n = node.shape
 		on_diag = (grb,gre) == (gcb,gce)
-		n_row_blocks = hMatrix.num_blocks( block_size, m )
-		n_col_blocks = hMatrix.num_blocks( block_size, n )
+		n_row_blocks = hmath.num_blocks( block_size, m )
+		n_col_blocks = hmath.num_blocks( block_size, n )
 		
 		if on_diag and dense_diag:
 			if n_row_blocks == 1 :
@@ -120,7 +126,7 @@ def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 				
 				else:
 					# Partition
-					bounds = [ hMatrix.block_begin( block_size, m, i ) for i in range( 1, n_row_blocks, 1 ) ]
+					bounds = [ hmath.block_begin( block_size, m, i ) for i in range( 1, n_row_blocks, 1 ) ]
 					n_part_pts = np.random.randint( 1, min( len(bounds), 4 )+1 )
 					part_pts = np.random.choice( bounds, size=n_part_pts, replace=False )
 					part_pts.sort()
@@ -179,7 +185,7 @@ def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 				elif r < 0.95:
 					# Partition
 					if n_row_blocks > 1 :
-						row_bounds = [ hMatrix.block_begin( block_size, m, i ) for i in range( 1, n_row_blocks, 1 ) ]
+						row_bounds = [ hmath.block_begin( block_size, m, i ) for i in range( 1, n_row_blocks, 1 ) ]
 						n_row_part_pts = np.random.randint( 1, min( len(row_bounds), 4 )+1 )
 						row_part_pts = np.random.choice( row_bounds, size=n_row_part_pts, replace=False )
 						row_part_pts.sort()
@@ -187,7 +193,7 @@ def make_random_hMatrix( M, N, block_size, dense_diag=True ):
 						row_part_pts=[]
 					
 					if n_col_blocks > 1 :
-						col_bounds = [ hMatrix.block_begin( block_size, n, i ) for i in range( 1, n_col_blocks, 1 ) ]
+						col_bounds = [ hmath.block_begin( block_size, n, i ) for i in range( 1, n_col_blocks, 1 ) ]
 						n_col_part_pts = np.random.randint( 1, min( len(col_bounds), 4 )+1 )
 						col_part_pts = np.random.choice( col_bounds, size=n_col_part_pts, replace=False )
 						col_part_pts.sort()
@@ -225,12 +231,12 @@ def test_construction():
 
 	A, tru_dense_A = make_random_hMatrix( 43,43, 5 )
 	
-	dense_A = hMatrix_todense.hMatrix_todense( A )
+	dense_A = hmath.todense( A )
 	
 	assert np.max( np.abs( tru_dense_A - dense_A ) ) < 1e-9
 	
-	n_blocks = hMatrix.num_blocks( 5, 43 )
-	bounds = [ hMatrix.block_begin( 5, 43, i ) for i in range(n_blocks+1) ]
+	n_blocks = hmath.num_blocks( 5, 43 )
+	bounds = [ hmath.block_begin( 5, 43, i ) for i in range(n_blocks+1) ]
 	for i in range(n_blocks):
 		for j in range(n_blocks):
 			rb = bounds[i]
@@ -238,7 +244,7 @@ def test_construction():
 			cb = bounds[j]
 			ce = bounds[j+1]
 			
-			tmp = hMatrix_todense.hMatrix_todense( A[rb:re,cb:ce] )
+			tmp = hmath.todense( A[rb:re,cb:ce] )
 			assert np.max( np.abs( tru_dense_A[rb:re,cb:ce] - tmp ) ) < 1e-9
 
 
@@ -255,9 +261,9 @@ def test_hMatrixGEMM_1():
 	print(f"Random seed is {seed}")
 	np.random.seed(seed)
 
-	A = hMatrix.hMatrix( 20,14, 5 )
-	B = hMatrix.hMatrix( 14, 4, 5 )
-	C = hMatrix.hMatrix( 20, 4, 5 )
+	A = hmath.hMatrix( 20,14, 5 )
+	B = hmath.hMatrix( 14, 4, 5 )
+	C = hmath.hMatrix( 20, 4, 5 )
 	root = A.root_node()
 	root.partition( [5,10], [6] )
 	cshape = root.children_shape()
@@ -266,15 +272,15 @@ def test_hMatrixGEMM_1():
 		    child = root.get_child(i,j)
 		    shp = child.shape
 		    child.insert_dense( np.astype(np.random.random(shp),np.complex128) )
-	a = hMatrix_todense.hMatrix_todense( A )
+	a = hmath.todense( A )
 
 	root = B.root_node()
 	shp = root.shape
 	rank = 3
 	root.insert_lowrank(  np.astype(np.random.random((shp[0],rank)),np.complex128),  np.astype(np.random.random((rank,shp[1])),np.complex128) )
-	b = hMatrix_todense.hMatrix_todense( B )
-	hMatrixGEMM.hMatrixGEMM( 1.0, A, B, C )
-	c = hMatrix_todense.hMatrix_todense( C )
+	b = hmath.todense( B )
+	hmath.GEMM( 1.0, A, B, C )
+	c = hmath.todense( C )
 
 	assert np.linalg.norm((a@b)-c) < 1e-9
 
@@ -299,9 +305,9 @@ def test_hMatrixGEMM_2():
 	B, tru_dense_B = make_random_hMatrix( 63,43, 5 )
 	C, tru_dense_C = make_random_hMatrix( 43,43, 5 )
 	
-	hMatrixGEMM.hMatrixGEMM( -1.0, A, B, C )
+	hmath.GEMM( -1.0, A, B, C )
 	
-	dense_C = hMatrix_todense.hMatrix_todense( C )
+	dense_C = hmath.todense( C )
 	
 	tru_dense_C -= tru_dense_A @ tru_dense_B
 	
@@ -327,10 +333,10 @@ def test_hMatrixTRSM_1():
 	A, tru_dense_A = make_random_hMatrix( M, M, block_size )
 	
 	p = np.zeros( M, dtype=np.uint64 )
-	n_blocks = hMatrix.num_blocks( block_size, M )
+	n_blocks = hmath.num_blocks( block_size, M )
 	for i in range(n_blocks):
-		begin = hMatrix.block_begin( block_size, M, i )
-		end = hMatrix.block_begin( block_size, M, i+1 )
+		begin = hmath.block_begin( block_size, M, i )
+		end = hmath.block_begin( block_size, M, i+1 )
 		p[begin:end] = np.arange(end-begin)
 	
 	
@@ -339,9 +345,9 @@ def test_hMatrixTRSM_1():
 	
 	side = "L"
 	uplo = "L"
-	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	hmath.TRSM( side, uplo, p, A, B )
 	
-	dense_x = hMatrix_todense.hMatrix_todense( B )
+	dense_x = hmath.todense( B )
 	
 	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B, trans=0, lower=True, unit_diagonal=True, overwrite_b=False, check_finite=False)
 	
@@ -353,9 +359,9 @@ def test_hMatrixTRSM_1():
 	
 	side = "R"
 	uplo = "L"
-	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	hmath.TRSM( side, uplo, p, A, B )
 	
-	dense_x = hMatrix_todense.hMatrix_todense( B )
+	dense_x = hmath.todense( B )
 	
 	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B.T, trans=1, lower=True, unit_diagonal=True, overwrite_b=False, check_finite=False)
 	
@@ -367,9 +373,9 @@ def test_hMatrixTRSM_1():
 	
 	side = "L"
 	uplo = "U"
-	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	hmath.TRSM( side, uplo, p, A, B )
 	
-	dense_x = hMatrix_todense.hMatrix_todense( B )
+	dense_x = hmath.todense( B )
 	
 	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B, trans=0, lower=False, unit_diagonal=False, overwrite_b=False, check_finite=False)
 	
@@ -381,9 +387,9 @@ def test_hMatrixTRSM_1():
 	
 	side = "R"
 	uplo = "U"
-	hMatrixTRSM.hMatrixTRSM( side, uplo, p, A, B )
+	hmath.TRSM( side, uplo, p, A, B )
 	
-	dense_x = hMatrix_todense.hMatrix_todense( B )
+	dense_x = hmath.todense( B )
 	
 	tru_dense_x = solve_triangular( tru_dense_A, tru_dense_B.T, trans=1, lower=False, unit_diagonal=False, overwrite_b=False, check_finite=False)
 	
@@ -405,18 +411,18 @@ def test_hMatrixGETRF_1():
 	A, tru_dense_A = make_random_hMatrix( M, M, block_size )
 	p = np.zeros( M, dtype = np.uint64 )
 	
-	hMatrixGETRF.hMatrixGETRF( p, A )
+	hmath.GETRF( p, A )
 	
-	B = hMatrix.hMatrix( M, 2, block_size )
+	B = hmath.hMatrix( M, 2, block_size )
 	tru_dense_B = rand_complex( (M,2) )
 	B.root_node().insert_dense( tru_dense_B )
 	
 	tru_dense_x = np.linalg.solve( tru_dense_A, tru_dense_B )
 	
-	hMatrixTRSM.hMatrixTRSM( "L", "L", p, A, B )
-	hMatrixTRSM.hMatrixTRSM( "L", "U", p, A, B )
+	hmath.TRSM( "L", "L", p, A, B )
+	hmath.TRSM( "L", "U", p, A, B )
 	
-	dense_x = hMatrix_todense.hMatrix_todense( B )
+	dense_x = hmath.todense( B )
 	
 	assert np.max( np.abs( tru_dense_x - dense_x ) ) < 1e-9
 

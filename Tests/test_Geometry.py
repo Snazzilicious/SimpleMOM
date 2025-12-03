@@ -7,6 +7,10 @@ sys.path.insert( 0, parent_dir )
 
 import Geometry as geo
 
+import numpy as np
+
+
+
 def is_unit_vector( v ):
 	return np.isclose( np.linalg.norm(v), 1.0 )
 

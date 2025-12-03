@@ -2,8 +2,8 @@
 import numpy as np
 from scipy.linalg import solve_triangular
 
-from hMatrix import hMatrix, num_blocks, block_begin
-from hMatrixGEMM import hMatrixGEMM
+from . import hMatrix, num_blocks, block_begin
+from .hMatrixGEMM import hMatrixGEMM
 
 
 def Leaf_TRSM( side, uplo, piv, A, B ):

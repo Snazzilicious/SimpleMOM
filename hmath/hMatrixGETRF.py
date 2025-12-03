@@ -2,9 +2,10 @@
 import numpy as np
 from scipy.linalg import lu_factor
 
-from hMatrix import num_blocks
-from hMatrixGEMM import hMatrixGEMM
-from hMatrixTRSM import hMatrixTRSM, wrap_partition_dense
+from . import num_blocks
+from .hMatrixGEMM import hMatrixGEMM
+from .hMatrixTRSM import hMatrixTRSM
+from .hMatrixTRSM import wrap_partition_dense
 
 def Leaf_GETRF( piv, A ):
 	a = A.get_dense_data()

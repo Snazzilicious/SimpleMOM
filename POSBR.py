@@ -66,7 +66,8 @@ else:
 """Asymptotic current formulas
 """
 
-from . import EM_Utils
+#from . import EM_Utils
+import EM_Utils
 
 def PO_current_from_H( H_pol, normals ):
 	return 2 * np.cross( normals, H_pol )

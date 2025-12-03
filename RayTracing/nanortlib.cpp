@@ -1,4 +1,4 @@
-
+// g++ -shared -fPIC nanortlib.cpp -o nanortlib.so
 
 #include "TracerNanoRT.hpp"
 #include "Ray.hpp"

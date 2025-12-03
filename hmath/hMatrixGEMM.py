@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from hMatrix import hMatrix
+from . import hMatrix
 
 
 def rSVD( L, R, max_rank=None, tol=1e-5 ):
