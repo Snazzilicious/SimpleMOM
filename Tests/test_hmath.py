@@ -8,13 +8,7 @@ sys.path.insert( 0, parent_dir )
 
 import numpy as np
 
-#import hMatrix
-#import hMatrix_todense
-#import hMatrixGEMM
-#import hMatrixTRSM
-#import hMatrixGETRF
-
-import hmath
+from .. import hmath
 
 
 """Tests of block boundary functions

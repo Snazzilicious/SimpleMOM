@@ -5,7 +5,7 @@ import sys
 parent_dir = os.path.sep.join( os.path.abspath(__file__).split(os.path.sep)[:-2] )
 sys.path.insert( 0, parent_dir )
 
-import Geometry as geo
+from .. import Geometry as geo
 
 import numpy as np
 
