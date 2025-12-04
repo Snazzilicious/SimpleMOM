@@ -327,7 +327,7 @@ def load_stars( filename ):
 	verts_string_list = f.readline().split()
 	vertices=[]
 	for vert_str in verts_string_list:
-		m = re.findall( "[0\-]\.[0-9]+E[+\-][0-9][-0-9]", vert_str )
+		m = re.findall( r"[0\-]\.[0-9]+E[+\-][0-9][-0-9]", vert_str )
 		vertices.append([ float(i) for i in m ])
 	
 	vertices = np.vstack(vertices)
@@ -383,7 +383,7 @@ def write_stars( filename, vertices, faces, groups, groupnames ):
 		else:
 			return "-."+s[1]
 
-	vertex_str = re.sub("-*[1-9]\.", swap_decimal, vertex_str)
+	vertex_str = re.sub( r"-*[1-9]\.", swap_decimal, vertex_str )
 
 	def exp_incr(m):
 		val = int(m[0][1:])+1
@@ -392,10 +392,10 @@ def write_stars( filename, vertices, faces, groups, groupnames ):
 		else:
 			return m[0][:2]+"{0:02d}".format(abs(val))
 
-	vertex_str = re.sub("E[+-][0-9][0-9]", exp_incr, vertex_str)
+	vertex_str = re.sub( r"E[+-][0-9][0-9]", exp_incr, vertex_str )
 
-	vertex_str = re.sub("0\.000000E\+01","0.0000000E+00", vertex_str)
-	vertex_str = re.sub("-0\.","-.", vertex_str)
+	vertex_str = re.sub( r"0\.000000E\+01","0.0000000E+00", vertex_str )
+	vertex_str = re.sub( r"-0\.","-.", vertex_str )
 
 	f.write(vertex_str)
 
@@ -526,7 +526,7 @@ def load_obj( meshfilename ):
 			groupnames.append(line[2:-1])
 			groups.append([])
 		elif line[0] == 'f' :
-			faces.append([ int(i) for i in re.findall( "([0-9]+)(?://[0-9]+)?", line ) ])
+			faces.append([ int(i) for i in re.findall( r"([0-9]+)(?://[0-9]+)?", line ) ])
 			groups[-1].append(ind)
 			ind += 1
 		line = f.readline()
