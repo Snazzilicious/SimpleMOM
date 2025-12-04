@@ -9,7 +9,7 @@ eps = epsilon_0
 mu = mu_0
 
 def omega_from_Hz( freq ):
-	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \omega t}.
+	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \\omega t}.
 	
 	Arguments
 		freq : array_like
@@ -35,7 +35,7 @@ def k_from_omega( w ):
 	return w/c
 
 def omega_from_k( k ):
-	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \omega t}.
+	"""Compute the angular frequency in the time-dependent part of time-harmonic solutions e^{i \\omega t}.
 	
 	Arguments
 		k : array_like
@@ -235,7 +235,7 @@ def to_dBsm( x ):
 	
 	Returns
 		dBsm : ndarray of floats
-			10*log_10( 4\pi (x)^2 + 1e-12 )
+			10*log_10( 4\\pi (x)^2 + 1e-12 )
 	"""
 	# For RCS: 10*log_10( 4\pi ( |E_s|/|E_i| )^2 )
 	return 10*np.log10( 4*np.pi*np.abs( x )**2+1e-12 )
